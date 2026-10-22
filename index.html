@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#123047">
+  <meta name="description" content="Crea liste di materiali con la voce e condividile in PDF.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Lista Materiali</title>
+  <style>
+    :root{color-scheme:light;--navy:#123047;--blue:#087ea4;--pale:#eaf5f8;--line:#d9e3e8;--ink:#17252e;--muted:#60717b;--red:#b42318}
+    *{box-sizing:border-box}
+    body{margin:0;background:#f3f6f8;color:var(--ink);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{background:var(--navy);color:white;padding:20px 16px 18px}
+    header .wrap,main{max-width:760px;margin:auto}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-mark{width:42px;height:42px;border-radius:12px;background:#e2f6fb;color:var(--navy);display:grid;place-items:center;font-size:23px;font-weight:800}
+    h1{font-size:1.35rem;margin:0} header p{margin:3px 0 0;color:#cfe3ed;font-size:.92rem}
+    main{padding:16px;display:grid;gap:14px}
+    .panel{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 3px 12px #12304708}
+    h2{font-size:1.03rem;margin:0 0 10px}
+    .muted{color:var(--muted);font-size:.9rem}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    button{border:0;border-radius:12px;padding:12px 14px;font:600 1rem system-ui;cursor:pointer;min-height:46px}
+    button:focus-visible,input:focus-visible{outline:3px solid #69c8e5;outline-offset:2px}
+    .primary{background:var(--blue);color:white}.dark{background:var(--navy);color:white}.light{background:var(--pale);color:var(--navy)}.danger{background:#fff0ef;color:var(--red)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .status{margin-top:10px;padding:10px 12px;border-radius:10px;background:#f0f5f7;font-size:.92rem}
+    .status.listening{background:#fff0ed;color:#a3291c}.status.ok{background:#eaf8ee;color:#176b35}
+    label{display:block;font-size:.85rem;font-weight:650;margin:0 0 5px}
+    input{width:100%;min-width:0;border:1px solid #cbd8de;border-radius:9px;padding:10px;font:inherit;background:white;color:var(--ink)}
+    .manual{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end}
+    .list-head,.item{display:grid;grid-template-columns:minmax(0,1fr) 105px 42px;gap:10px;align-items:center}
+    .list-head{font-size:.82rem;color:var(--muted);font-weight:700;padding:0 8px 8px;border-bottom:1px solid var(--line)}
+    .item{padding:10px 4px;border-bottom:1px solid #edf1f3}
+    .item:last-child{border-bottom:0}
+    .item input{padding:8px;font-size:.94rem}
+    .item .qty-wrap{display:flex;gap:4px;align-items:center}
+    .item .qty-wrap input{width:54px;text-align:right}
+    .item .qty-wrap select{width:100%;min-width:0;border:1px solid #cbd8de;border-radius:8px;padding:8px 2px;background:white}
+    .iconbtn{min-height:38px;padding:6px;background:#fff0ef;color:var(--red);border-radius:9px;font-size:1rem}
+    .empty{padding:22px 8px;text-align:center;color:var(--muted)}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .full{grid-column:1/-1}
+    .small-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .small-actions button{font-size:.88rem;min-height:38px;padding:8px 10px}
+    .note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+    footer{text-align:center;color:var(--muted);font-size:.78rem;padding:0 16px 24px}
+    .badge{display:inline-block;background:#e7f4f8;color:#12556d;padding:3px 8px;border-radius:999px;font-size:.76rem;font-weight:700;margin-left:5px}
+    @media(max-width:520px){main{padding:11px}.panel{padding:13px}.manual{grid-template-columns:1fr 1fr}.manual .wide{grid-column:1/-1}.manual button{grid-column:1/-1}.list-head,.item{grid-template-columns:minmax(0,1fr) 120px 36px;gap:6px}.item .qty-wrap input{width:48px}.item .qty-wrap select{font-size:.8rem}.controls button{padding:10px 8px;font-size:.93rem}}
+
+    .confirm-box{border:2px solid #7fc6dc;background:#f3fbfd}
+    .confirm-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid #d6eaf0;align-items:center}
+    .confirm-line:last-child{border-bottom:0}
+    .confirm-name{font-weight:700}
+    .confirm-qty{font-weight:800;white-space:nowrap;text-align:right}
+    .change{font-size:.84rem;color:#315b69;font-weight:500}
+    .qty-wrap{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+    .qty-wrap input{width:48px!important;text-align:center}
+    .qty-wrap select{max-width:74px}
+    .stepbtn{min-height:36px;width:32px;padding:0;border-radius:8px;background:#eaf5f8;color:#123047;font-size:1.1rem}
+    .toast{position:sticky;bottom:10px;background:#123047;color:white;padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 6px 24px #0002;z-index:5}
+    .toast button{background:#e2f6fb;color:#123047;min-height:36px;padding:8px 12px}
+    @media(max-width:520px){.qty-wrap{gap:3px}.qty-wrap input{width:38px!important;padding:7px 2px!important}.qty-wrap select{max-width:62px;padding:7px 1px!important}.stepbtn{width:29px;min-height:35px}}
+    @media print{
+      body{background:white;color:#111;font:11pt/1.35 Arial,sans-serif}
+      header{background:white;color:#111;padding:0 0 14px;border-bottom:2px solid #333}
+      header p{color:#444} .brand-mark,.no-print,footer{display:none!important}
+      main{display:block;max-width:none;padding:14px 0}
+      .panel{border:0;box-shadow:none;border-radius:0;padding:8px 0;margin:0 0 10px}
+      #voicePanel,#confirmPanel,#manualPanel,#actionsPanel,#listPanel .list-head .actions-col,.small-actions,.item .iconbtn{display:none!important}
+      #listPanel{display:block}
+      #listPanel h2{font-size:14pt}
+      .list-head,.item{grid-template-columns:1fr 125px 0;gap:12px;padding:8px 4px}
+      .item{break-inside:avoid}
+      .item input{border:0;padding:0;background:transparent;color:#111;font-size:11pt}
+      .item .qty-wrap input{width:50px;text-align:right}
+      .item .qty-wrap select,.item .stepbtn{display:none}
+      .item .qty-wrap:after{content:attr(data-unit);font-size:10pt}
+      .list-head .qty-title{text-align:right}
+      .list-head .actions-title{display:none}
+      #listTitle{border:0;font-size:18pt;font-weight:bold;padding:0}
+      .print-meta{display:block!important}
+    }
+    .print-meta{display:none}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">LM</div>
+      <div><h1>Lista Materiali</h1><p>Detta gli articoli, controlla le quantità, esporta in PDF.</p></div>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="panel" id="voicePanel">
+    <h2>1. Dettatura vocale <span class="badge">una frase alla volta</span></h2>
+    <p class="muted">Esempi: «due filtri olio» · «altri tre filtri olio» · «quattro cinghie A settantadue» · «tre litri di olio compressore».</p>
+    <div class="controls">
+      <button class="primary" id="startBtn">🎙️ Detta una frase</button>
+      <button class="light" id="stopBtn" disabled>■ Termina ascolto</button>
+    </div>
+    <div class="status" id="voiceStatus" role="status" aria-live="polite">Premi il microfono e parla in italiano. La frase verrà elaborata quando hai finito.</div>
+    <div style="margin-top:12px">
+      <label for="transcript">Frase riconosciuta (puoi correggerla)</label>
+      <input id="transcript" placeholder="Qui apparirà quello che hai detto" autocomplete="off">
+      <div class="small-actions">
+        <button class="dark" id="applySpeechBtn">Aggiungi alla lista</button>
+        <button class="light" id="clearTranscriptBtn">Cancella frase</button>
+      </div>
+    </div>
+    <p class="note">Il riconoscimento vocale richiede un browser compatibile e, normalmente, una connessione Internet. Puoi sempre inserire gli articoli manualmente.</p>
+  </section>
+
+  <section class="panel confirm-box" id="confirmPanel" hidden>
+    <h2>Conferma inserimento</h2>
+    <p class="muted" id="confirmIntro">Controlla gli articoli riconosciuti prima di aggiornare la lista.</p>
+    <div id="confirmItems"></div>
+    <div class="actions" style="margin-top:12px">
+      <button class="primary" id="confirmAcceptBtn">✓ Conferma inserimento</button>
+      <button class="light" id="confirmEditBtn">✎ Correggi frase</button>
+      <button class="danger full" id="confirmCancelBtn">Annulla inserimento</button>
+    </div>
+  </section>
+
+  <section class="panel" id="manualPanel">
+    <h2>2. Aggiungi manualmente</h2>
+    <form class="manual" id="manualForm">
+      <div class="wide"><label for="articleInput">Nome articolo</label><input id="articleInput" placeholder="Es. Filtro olio" required maxlength="100"></div>
+      <div><label for="quantityInput">Quantità</label><input id="quantityInput" type="number" min="0.01" step="any" value="1" required></div>
+      <div><label for="unitInput">Unità</label><select id="unitInput" style="width:100%;height:44px;border:1px solid #cbd8de;border-radius:9px;padding:8px;background:white;font:inherit"><option value="pz">pz</option><option value="litri">litri</option><option value="kg">kg</option><option value="m">m</option><option value="rotoli">rotoli</option><option value="scatole">scatole</option><option value="confezioni">confezioni</option><option value="ore">ore</option><option value="altro">altro</option></select></div>
+      <button class="primary" type="submit">+ Aggiungi</button>
+    </form>
+  </section>
+
+  <section class="panel" id="listPanel">
+    <h2>3. Elenco articoli</h2>
+    <div class="print-meta"><p id="printDate"></p></div>
+    <div style="margin-bottom:12px"><label for="listTitle">Titolo del PDF</label><input id="listTitle" value="Lista Materiali" maxlength="100"></div>
+    <div class="list-head"><div>ARTICOLO</div><div class="qty-title" style="text-align:right">QUANTITÀ</div><div class="actions-title"></div></div>
+    <div id="itemsList"><div class="empty">La lista è vuota. Detta o aggiungi il primo articolo.</div></div>
+    <div class="small-actions no-print">
+      <button class="light" id="sortBtn">Ordina A–Z</button>
+      <button class="danger" id="clearListBtn">Svuota lista</button>
+    </div>
+  </section>
+
+  <section class="panel no-print" id="actionsPanel">
+    <h2>4. Esporta e condividi</h2>
+    <div class="actions">
+      <button class="primary" id="pdfBtn">📄 Crea PDF</button>
+      <button class="dark" id="shareBtn">↗ Condividi lista</button>
+      <button class="light full" id="csvBtn">Scarica anche CSV (Excel)</button>
+    </div>
+    <p class="note">“Crea PDF” apre la finestra di stampa: scegli “Salva come PDF”, poi potrai condividere il file dal telefono. Il salvataggio della lista avviene automaticamente su questo dispositivo.</p>
+  </section>
+  <div id="undoToast" class="toast no-print" hidden><span id="undoText">Articolo eliminato.</span><button id="undoBtn">Annulla</button></div>
+</main>
+<footer>Lista Materiali · I dati restano nel browser di questo dispositivo.</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'listaMaterialiPWA_v1';
+  const units = ['pz','litri','kg','g','m','cm','rotoli','scatole','confezioni','ore','paia','set','kit','altro'];
+  let items = [];
+  let recognition = null;
+  let isListening = false;
+  let pendingItems = [];
+  let undoSnapshot = null;
+  let undoTimer = null;
+
+  function normalizeName(s) {
+    return String(s || '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[.,;:!?]+$/g,'').replace(/\s+/g,' ').trim();
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({items, title:$('listTitle').value})); } catch(e) {}
+  }
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (Array.isArray(data.items)) items = data.items;
+      if (data.title) $('listTitle').value = data.title;
+    } catch(e) { items = []; }
+    render();
+  }
+  function fmt(n) { return Number.isInteger(Number(n)) ? String(Number(n)) : String(Number(n)).replace('.', ','); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function render() {
+    const host = $('itemsList');
+    if (!items.length) { host.innerHTML = '<div class="empty">La lista è vuota. Detta o aggiungi il primo articolo.</div>'; save(); return; }
+    host.innerHTML = items.map((it,i) => `
+      <div class="item" data-index="${i}">
+        <div><input aria-label="Nome articolo" class="name-edit" value="${esc(it.name)}" maxlength="100"></div>
+        <div class="qty-wrap" data-unit="${esc(it.unit)}">
+          <button class="stepbtn minus-btn" aria-label="Diminuisci quantità" title="Diminuisci">−</button>
+          <input aria-label="Quantità" class="qty-edit" type="number" min="0.01" step="any" value="${esc(it.qty)}">
+          <button class="stepbtn plus-btn" aria-label="Aumenta quantità" title="Aumenta">+</button>
+          <select aria-label="Unità di misura" class="unit-edit">${units.map(u=>`<option value="${u}" ${u===it.unit?'selected':''}>${u}</option>`).join('')}</select>
+        </div>
+        <button class="iconbtn" aria-label="Elimina articolo" title="Elimina articolo">✕</button>
+      </div>`).join('');
+    host.querySelectorAll('.item').forEach(row => {
+      const i = Number(row.dataset.index);
+      row.querySelector('.name-edit').addEventListener('change', e => {
+        const val=e.target.value.trim(); if(!val){e.target.value=items[i].name;return;}
+        const duplicate=items.findIndex((it,j)=>j!==i&&normalizeName(it.name)===normalizeName(val)&&normalizeUnit(it.unit)===normalizeUnit(items[i].unit));
+        if(duplicate>=0){alert('Esiste già un articolo con questo nome e questa unità. Modifica la riga esistente oppure cambia il nome.');e.target.value=items[i].name;return;}
+        items[i].name=val; save(); render();
+      });
+      row.querySelector('.qty-edit').addEventListener('change', e => { const v=Number(e.target.value); if(!(v>0)){e.target.value=items[i].qty;return;} items[i].qty=v; save(); });
+      row.querySelector('.unit-edit').addEventListener('change', e => { items[i].unit=e.target.value; save(); render(); });
+      row.querySelector('.minus-btn').addEventListener('click', () => {
+        const next=Math.round((Number(items[i].qty)-1)*1000)/1000;
+        if(next<=0){deleteItem(i);return;}
+        items[i].qty=next;save();render();
+      });
+      row.querySelector('.plus-btn').addEventListener('click', () => {items[i].qty=Math.round((Number(items[i].qty)+1)*1000)/1000;save();render();});
+      row.querySelector('.iconbtn').addEventListener('click', () => deleteItem(i));
+    });
+    save();
+  }
+  function deleteItem(i) {
+    undoSnapshot = JSON.parse(JSON.stringify(items));
+    const removed = items[i];
+    items.splice(i,1); render();
+    $('undoText').textContent = `Rimosso: ${removed.name} (${fmt(removed.qty)} ${removed.unit})`;
+    $('undoToast').hidden=false;
+    clearTimeout(undoTimer);
+    undoTimer=setTimeout(()=>{$('undoToast').hidden=true;undoSnapshot=null;},8000);
+  }
+  $('undoBtn').addEventListener('click',()=>{
+    if(undoSnapshot){items=undoSnapshot;undoSnapshot=null;render();}
+    $('undoToast').hidden=true;clearTimeout(undoTimer);
+  });
+
+  function addItem(name, qty, unit='pz') {
+    name = String(name || '').trim().replace(/\s+/g,' ');
+    qty = Number(qty);
+    if (!name || !(qty > 0) || !Number.isFinite(qty)) return false;
+    unit = normalizeUnit(unit);
+    const key = normalizeName(name);
+    const found = items.find(it => normalizeName(it.name) === key && normalizeUnit(it.unit) === unit);
+    if (found) found.qty = Math.round((Number(found.qty) + qty) * 1000) / 1000;
+    else items.push({name: name.charAt(0).toLocaleUpperCase('it-IT') + name.slice(1), qty, unit});
+    render();
+    return true;
+  }
+  function stageSpeechItems(newItems) {
+    pendingItems = newItems.map(it => ({...it, unit:normalizeUnit(it.unit)}));
+    const host=$('confirmItems');
+    host.innerHTML=pendingItems.map((it,i)=>{
+      const existing=items.find(row=>normalizeName(row.name)===normalizeName(it.name)&&normalizeUnit(row.unit)===normalizeUnit(it.unit));
+      const old=existing?Number(existing.qty):0;
+      const total=Math.round((old+Number(it.qty))*1000)/1000;
+      return `<div class="confirm-line" data-pending-index="${i}">
+        <div><div class="confirm-name">${esc(it.name)}</div><div class="change">${existing?`Già in lista: ${fmt(old)} ${esc(it.unit)} + ${fmt(it.qty)} ${esc(it.unit)} = <strong>${fmt(total)} ${esc(it.unit)}</strong>`:'Nuovo articolo · unità: '+esc(it.unit)}</div></div>
+        <div class="confirm-qty">${fmt(it.qty)} ${esc(it.unit)}</div>
+      </div>`;
+    }).join('');
+    $('confirmIntro').textContent=pendingItems.length===1?'Verifica articolo, quantità e unità prima di confermare.':'Verifica gli articoli riconosciuti prima di confermare.';
+    $('confirmPanel').hidden=false;
+    $('confirmPanel').scrollIntoView({behavior:'smooth',block:'center'});
+    try{if(navigator.vibrate)navigator.vibrate(100);}catch(e){}
+    try{const Ctx=window.AudioContext||window.webkitAudioContext;if(Ctx){const ctx=new Ctx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.frequency.value=880;gain.gain.value=0.06;osc.start();osc.stop(ctx.currentTime+0.09);osc.onended=()=>ctx.close();}}catch(e){}
+  }
+  function confirmPending() {
+    if(!pendingItems.length)return;
+    pendingItems.forEach(it=>addItem(it.name,it.qty,it.unit));
+    $('confirmPanel').hidden=true;
+    $('transcript').value='';
+    pendingItems=[];
+    setStatus('Inserimento confermato. La lista è stata aggiornata.','ok');
+  }
+  $('confirmAcceptBtn').addEventListener('click',confirmPending);
+  $('confirmEditBtn').addEventListener('click',()=>{$('confirmPanel').hidden=true;$('transcript').focus();});
+  $('confirmCancelBtn').addEventListener('click',()=>{pendingItems=[];$('confirmPanel').hidden=true;setStatus('Inserimento annullato. La lista non è stata modificata.');});
+
+  function normalizeUnit(u) {
+    const x = normalizeName(u).replace(/\.$/,'');
+    const map = {'pezzo':'pz','pezzi':'pz','pezzo':'pz','pez':'pz','pzi':'pz','litro':'litri','l':'litri','lt':'litri','litri':'litri','chilogrammo':'kg','chilogrammi':'kg','chilo':'kg','chili':'kg','metro':'m','metri':'m','centimetro':'cm','centimetri':'cm','rotolo':'rotoli','scatola':'scatole','confezione':'confezioni','ora':'ore','paio':'paia','kit':'kit'};
+    return map[x] || (units.includes(x) ? x : 'altro');
+  }
+  const numberWords = {
+    'zero':0,'uno':1,'una':1,'un':1,'due':2,'tre':3,'quattro':4,'cinque':5,'sei':6,'sette':7,'otto':8,'nove':9,'dieci':10,
+    'undici':11,'dodici':12,'tredici':13,'quattordici':14,'quindici':15,'sedici':16,'diciassette':17,'diciotto':18,'diciannove':19,'venti':20,
+    'ventuno':21,'ventidue':22,'ventitre':23,'ventiquattro':24,'venticinque':25,'trenta':30,'quaranta':40,'cinquanta':50,'sessanta':60,'settanta':70,'ottanta':80,'novanta':90,'cento':100,
+    'mezzo':0.5,'mezza':0.5
+  };
+  function parseQuantity(s) {
+    const m = s.match(/^\s*(\d+(?:[.,]\d+)?|zero|uno|una|un|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|ventuno|ventidue|ventitre|ventiquattro|venticinque|trenta|quaranta|cinquanta|sessanta|settanta|ottanta|novanta|cento|mezzo|mezza)\b/i);
+    if (!m) return null;
+    const raw=m[1].toLocaleLowerCase('it-IT');
+    return {qty: numberWords[raw] ?? Number(raw.replace(',','.')), rest:s.slice(m[0].length).trim()};
+  }
+  function parseUnitAndName(rest) {
+    let s = rest.trim().replace(/^(di|del|della|dello|dei|degli|delle|di un|di una)\s+/i,'').trim();
+    const patterns = [
+      [/^(?:pezzi|pezzo|pz|pzi)\s+(?:di\s+)?/i,'pz'],
+      [/^(?:litri|litro|litri di|l|lt)\s+(?:di\s+)?/i,'litri'],
+      [/^(?:kg|chili|chilo|chilogrammi|chilogrammo)\s+(?:di\s+)?/i,'kg'],
+      [/^(?:grammi|grammo|g)\s+(?:di\s+)?/i,'g'],
+      [/^(?:metri|metro|m)\s+(?:di\s+)?/i,'m'],
+      [/^(?:centimetri|centimetro|cm)\s+(?:di\s+)?/i,'cm'],
+      [/^(?:rotoli|rotolo)\s+(?:di\s+)?/i,'rotoli'],
+      [/^(?:scatole|scatola)\s+(?:di\s+)?/i,'scatole'],
+      [/^(?:confezioni|confezione)\s+(?:di\s+)?/i,'confezioni'],
+      [/^(?:ore|ora)\s+(?:di\s+)?/i,'ore'],
+      [/^(?:paia|paio)\s+(?:di\s+)?/i,'paia'],
+      [/^(?:kit)\s+(?:di\s+)?/i,'kit']
+    ];
+    for (const [re,u] of patterns) { if(re.test(s)) return {unit:u,name:s.replace(re,'').trim()}; }
+    // Unit expressed after the item, e.g. "olio compressore 3 litri" is handled by reverse parser.
+    return {unit:'pz',name:s};
+  }
+  function parsePhrase(phrase) {
+    let s = String(phrase||'').trim().replace(/[.!?]+$/,'').replace(/\s+/g,' ');
+    if(!s) return {ok:false,message:'Non ho trovato una frase da elaborare.'};
+    // Support multiple articles separated by "e" only when each segment contains a quantity.
+    const chunks = s.split(/\s*,\s*|\s+e\s+(?=(?:\d|un\b|una\b|uno\b|due\b|tre\b|quattro\b|cinque\b|sei\b|sette\b|otto\b|nove\b|dieci\b|altri?\b))/i).filter(Boolean);
+    const parsed=[];
+    for(let chunk of chunks) {
+      chunk=chunk.replace(/^(aggiungi|aggiungere|mi servono|servono|prendi|prendere|altri|altre|ancora)\s+/i,'').trim();
+      const q=parseQuantity(chunk);
+      if(!q || !q.rest) return {ok:false,message:'Non ho riconosciuto quantità e articolo. Prova: “due filtri olio” oppure “tre litri di olio compressore”.'};
+      let rest=q.rest.trim();
+      // If unit occurs at end: "olio compressore 3 litri" (quantity is taken from start only if it starts the phrase)
+      let parsedPart=parseUnitAndName(rest);
+      if(!parsedPart.name) return {ok:false,message:'Manca il nome dell’articolo. Riprova con quantità e nome, per esempio “due filtri olio”.'};
+      // Detect common voice-transcription forms for belts/model numbers without changing the original name.
+      parsed.push({name:parsedPart.name,qty:q.qty,unit:parsedPart.unit});
+    }
+    return {ok:true,items:parsed};
+  }
+  function setStatus(msg,kind='') { $('voiceStatus').textContent=msg; $('voiceStatus').className='status '+kind; }
+  function initSpeech() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      $('startBtn').disabled=true;
+      setStatus('Questo browser non supporta il riconoscimento vocale. Prova Chrome su Android oppure inserisci gli articoli manualmente.');
+      return;
+    }
+    recognition = new SR();
+    recognition.lang='it-IT'; recognition.continuous=false; recognition.interimResults=true; recognition.maxAlternatives=1;
+    recognition.onstart=()=>{isListening=true;$('startBtn').disabled=true;$('stopBtn').disabled=false;setStatus('Ti ascolto… pronuncia una frase e poi fai una breve pausa.','listening');};
+    recognition.onresult=e=>{
+      let finalText='', interim='';
+      for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)finalText+=t;else interim+=t;}
+      $('transcript').value=(finalText||interim).trim();
+      if(finalText) setStatus('Frase riconosciuta. Controllala e premi “Aggiungi alla lista”.','ok');
+    };
+    recognition.onerror=e=>{
+      const messages={ 'not-allowed':'Permesso microfono negato. Abilita il microfono nelle impostazioni del browser.','no-speech':'Non ho sentito parole. Riprova.','network':'Errore di rete durante il riconoscimento vocale.','audio-capture':'Microfono non disponibile.' };
+      setStatus(messages[e.error]||('Errore del microfono: '+e.error));
+    };
+    recognition.onend=()=>{isListening=false;$('startBtn').disabled=false;$('stopBtn').disabled=true;if($('transcript').value.trim()) setStatus('Frase pronta. Controlla il testo e premi “Aggiungi alla lista”.','ok');};
+  }
+  $('startBtn').addEventListener('click',()=>{if(!recognition)initSpeech();if(recognition){$('transcript').value='';try{recognition.start();}catch(e){setStatus('Attendi un istante e premi di nuovo il microfono.');}}});
+  $('stopBtn').addEventListener('click',()=>{if(recognition&&isListening)recognition.stop();});
+  $('applySpeechBtn').addEventListener('click',()=>{
+    const result=parsePhrase($('transcript').value);
+    if(!result.ok){setStatus(result.message);return;}
+    stageSpeechItems(result.items);
+    setStatus('Controlla la proposta e conferma prima di modificare la lista.','ok');
+  });
+  $('clearTranscriptBtn').addEventListener('click',()=>{$('transcript').value='';setStatus('Frase cancellata.');});
+  $('manualForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    if(addItem($('articleInput').value,$('quantityInput').value,$('unitInput').value)){
+      $('articleInput').value='';$('quantityInput').value='1';$('articleInput').focus();setStatus('Articolo aggiunto. Se già presente con la stessa unità, la quantità è stata sommata.','ok');
+    }
+  });
+  $('listTitle').addEventListener('input',save);
+  $('sortBtn').addEventListener('click',()=>{items.sort((a,b)=>a.name.localeCompare(b.name,'it'));render();});
+  $('clearListBtn').addEventListener('click',()=>{if(confirm('Vuoi eliminare tutti gli articoli della lista?')){undoSnapshot=JSON.parse(JSON.stringify(items));items=[];render();$('undoText').textContent='Lista svuotata.';$('undoToast').hidden=false;clearTimeout(undoTimer);undoTimer=setTimeout(()=>{$('undoToast').hidden=true;undoSnapshot=null;},8000);setStatus('Lista svuotata. Puoi annullare entro pochi secondi.');}});
+  $('pdfBtn').addEventListener('click',()=>{
+    if(!items.length){alert('Aggiungi almeno un articolo prima di creare il PDF.');return;}
+    $('printDate').textContent='Data: '+new Date().toLocaleDateString('it-IT');
+    document.title=($('listTitle').value.trim()||'Lista Materiali').replace(/[\\/:*?"<>|]/g,'-');
+    window.print();
+  });
+  $('shareBtn').addEventListener('click',async()=>{
+    if(!items.length){alert('Aggiungi almeno un articolo prima di condividere.');return;}
+    const title=$('listTitle').value.trim()||'Lista Materiali';
+    const text=title+'\n'+items.map(it=>`${it.name}: ${fmt(it.qty)} ${it.unit}`).join('\n');
+    if(navigator.share){
+      try{await navigator.share({title,text});}catch(e){if(e.name!=='AbortError')fallbackCopy(text);}
+    } else fallbackCopy(text);
+  });
+  async function fallbackCopy(text){try{await navigator.clipboard.writeText(text);alert('Lista copiata negli appunti. Puoi incollarla in WhatsApp o in un messaggio.');}catch(e){prompt('Copia la lista:',text);}}
+  $('csvBtn').addEventListener('click',()=>{
+    if(!items.length){alert('Aggiungi almeno un articolo prima di scaricare il CSV.');return;}
+    const rows=[['Articolo','Quantità','Unità'],...items.map(it=>[it.name,fmt(it.qty),it.unit])];
+    const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='lista-materiali.csv';a.click();URL.revokeObjectURL(url);
+  });
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.deferredInstallPrompt=e;});
+  load();initSpeech();
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "Lista Materiali - Dettatura vocale",
+  "short_name": "Lista Materiali",
+  "description": "Crea liste di materiali con la voce ed esportale in PDF.",
+  "lang": "it-IT",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f8",
+  "theme_color": "#123047",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
