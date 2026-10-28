@@ -12,16 +12,16 @@ FUNZIONI
 - Dati del rapportino: titolo, cliente e data.
 - Catalogo iniziale con raccordi, niples, valvole, scaricatori, prese industriali e cavo elettrico.
 - Scelta separata della misura/tipo dopo la selezione dell'articolo.
-- Cavo elettrico gestito in metri, con sezioni iniziali modificabili.
+- Cavo elettrico gestito in metri, con sezioni iniziali 2×1,5; 3×1,5; 3×2,5; 3×4; 3×6; 3×10; 4×6; 4×10 mm² e voce Altro.
 - Casella FA per materiale preso dal magazzino del furgone; la spunta si azzera dopo ogni inserimento.
 - La sigla FA appare soltanto per le righe contrassegnate FA.
 - Le quantità si sommano se articolo, misura, unità e stato FA coincidono.
 - Gestione catalogo: aggiunta, modifica ed eliminazione degli articoli e delle varianti.
 - Modifica rapida quantità con +/−, eliminazione righe e ordinamento A–Z.
-- PDF tramite stampa del browser, condivisione testo e download CSV per Excel.
+- PDF tramite stampa del browser, condivisione diretta del PDF (se supportata dal dispositivo) e download CSV per Excel.
 - Salvataggio automatico locale sul dispositivo.
 
 NOTE
 - I dati vengono conservati nel browser del dispositivo e non si sincronizzano automaticamente con altri telefoni.
-- Il PDF si crea scegliendo “Salva come PDF” nella finestra di stampa.
+- Il pulsante “Condividi PDF” genera un PDF da condividere direttamente se il telefono/browser lo supporta; altrimenti scarica il PDF da allegare manualmente. Il pulsante “Crea PDF” apre anche la stampa del browser.
 - Le misure e le varianti del catalogo sono iniziali e vanno adattate ai materiali effettivamente usati.
