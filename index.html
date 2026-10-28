@@ -7,7 +7,7 @@
   <meta name="description" content="Crea liste di materiali con la voce e condividile in PDF.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <title>Lista Materiali</title>
+  <title>Rapportino</title>
   <style>
     :root{color-scheme:light;--navy:#123047;--blue:#087ea4;--pale:#eaf5f8;--line:#d9e3e8;--ink:#17252e;--muted:#60717b;--red:#b42318}
     *{box-sizing:border-box}
@@ -90,8 +90,8 @@
 <header>
   <div class="wrap">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">LM</div>
-      <div><h1>Lista Materiali</h1><p>Detta gli articoli, controlla le quantità, esporta in PDF.</p></div>
+      <div class="brand-mark" aria-hidden="true">R</div>
+      <div><h1>Rapportino</h1><p>Detta gli articoli, controlla le quantità, esporta in PDF.</p></div>
     </div>
   </div>
 </header>
@@ -110,6 +110,7 @@
       <div class="small-actions">
         <button class="dark" id="applySpeechBtn">Aggiungi alla lista</button>
         <button class="light" id="clearTranscriptBtn">Cancella frase</button>
+        <button class="light" id="speakProposalBtn">🔊 Ripeti proposta a voce</button>
       </div>
     </div>
     <p class="note">Il riconoscimento vocale richiede un browser compatibile e, normalmente, una connessione Internet. Puoi sempre inserire gli articoli manualmente.</p>
@@ -126,6 +127,17 @@
     </div>
   </section>
 
+  <section class="panel" id="dictionaryPanel">
+    <h2>Vocabolario tecnico</h2>
+    <p class="muted">Corregge automaticamente le varianti conosciute nella frase riconosciuta. Esempio: “Nibles” viene corretto in “Niples”.</p>
+    <div class="manual" id="dictionaryForm">
+      <div class="wide"><label for="dictCorrect">Parola corretta</label><input id="dictCorrect" value="Niples" maxlength="100"></div>
+      <div class="wide"><label for="dictVariants">Varianti errate (separate da virgola)</label><input id="dictVariants" value="Nibles, Nifles, Nibless, Nibla, Nibless" maxlength="300"></div>
+      <button class="primary" type="button" id="saveDictBtn">Salva parola</button>
+    </div>
+    <div id="dictionaryList" class="note" aria-live="polite"></div>
+  </section>
+
   <section class="panel" id="manualPanel">
     <h2>2. Aggiungi manualmente</h2>
     <form class="manual" id="manualForm">
@@ -139,7 +151,7 @@
   <section class="panel" id="listPanel">
     <h2>3. Elenco articoli</h2>
     <div class="print-meta"><p id="printDate"></p></div>
-    <div style="margin-bottom:12px"><label for="listTitle">Titolo del PDF</label><input id="listTitle" value="Lista Materiali" maxlength="100"></div>
+    <div style="margin-bottom:12px"><label for="listTitle">Titolo del PDF</label><input id="listTitle" value="Rapportino" maxlength="100"></div>
     <div class="list-head"><div>ARTICOLO</div><div class="qty-title" style="text-align:right">QUANTITÀ</div><div class="actions-title"></div></div>
     <div id="itemsList"><div class="empty">La lista è vuota. Detta o aggiungi il primo articolo.</div></div>
     <div class="small-actions no-print">
@@ -159,12 +171,15 @@
   </section>
   <div id="undoToast" class="toast no-print" hidden><span id="undoText">Articolo eliminato.</span><button id="undoBtn">Annulla</button></div>
 </main>
-<footer>Lista Materiali · I dati restano nel browser di questo dispositivo.</footer>
+<footer>Rapportino · I dati restano nel browser di questo dispositivo.</footer>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'listaMaterialiPWA_v1';
+  const DICT_KEY = 'rapportinoVocabolario_v1';
+  let dictionary = [{correct:'Niples', variants:['Nibles','Nifles','Nibless','Nibla','Niplez','Niples']}];
+  let voiceConfirmMode = false;
   const units = ['pz','litri','kg','g','m','cm','rotoli','scatole','confezioni','ore','paia','set','kit','altro'];
   let items = [];
   let recognition = null;
@@ -177,6 +192,37 @@
     return String(s || '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/[.,;:!?]+$/g,'').replace(/\s+/g,' ').trim();
   }
+  function loadDictionary() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(DICT_KEY) || 'null');
+      if (Array.isArray(stored) && stored.length) dictionary = stored;
+    } catch(e) {}
+    renderDictionary();
+  }
+  function saveDictionary() {
+    try { localStorage.setItem(DICT_KEY, JSON.stringify(dictionary)); } catch(e) {}
+    renderDictionary();
+  }
+  function renderDictionary() {
+    const host = $('dictionaryList');
+    if (!host) return;
+    host.innerHTML = dictionary.map((entry, i) => `<div style="padding:7px 0;border-top:1px solid #edf1f3"><strong>${esc(entry.correct)}</strong> ← ${esc((entry.variants||[]).join(', '))} <button type="button" class="light" data-dict-delete="${i}" style="min-height:30px;padding:4px 8px;font-size:.8rem">Rimuovi</button></div>`).join('') || 'Nessuna parola salvata.';
+    host.querySelectorAll('[data-dict-delete]').forEach(btn => btn.addEventListener('click', () => { dictionary.splice(Number(btn.dataset.dictDelete), 1); saveDictionary(); }));
+  }
+  function correctTechnicalTerms(text) {
+    let out = String(text || '');
+    for (const entry of dictionary) {
+      const correct = String(entry.correct || '').trim();
+      if (!correct) continue;
+      for (const variant of (entry.variants || [])) {
+        const v = String(variant || '').trim();
+        if (!v || normalizeName(v) === normalizeName(correct)) continue;
+        const escaped = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        out = out.replace(new RegExp('(^|[^\p{L}\p{N}])' + escaped + '(?=$|[^\p{L}\p{N}])', 'giu'), (match, prefix) => prefix + correct);
+      }
+    }
+    return out;
+  }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({items, title:$('listTitle').value})); } catch(e) {}
   }
@@ -184,7 +230,7 @@
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       if (Array.isArray(data.items)) items = data.items;
-      if (data.title) $('listTitle').value = data.title;
+      if (data.title) $('listTitle').value = data.title === 'Lista Materiali' ? 'Rapportino' : data.title;
     } catch(e) { items = []; }
     render();
   }
@@ -276,6 +322,31 @@
     pendingItems=[];
     setStatus('Inserimento confermato. La lista è stata aggiornata.','ok');
   }
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) { setStatus('La lettura vocale non è supportata da questo browser.'); return; }
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'it-IT'; utterance.rate = 0.92;
+      window.speechSynthesis.speak(utterance);
+    } catch(e) { setStatus('Non riesco a riprodurre la voce su questo dispositivo.'); }
+  }
+  $('speakProposalBtn').addEventListener('click', () => {
+    const text = pendingItems.length
+      ? 'Ho capito: ' + pendingItems.map(it => `${fmt(it.qty)} ${it.unit === 'pz' ? (Number(it.qty)===1?'pezzo':'pezzi') : it.unit} di ${it.name}`).join('; ') + '. Premi conferma inserimento oppure correggi la frase.'
+      : 'Non c’è una proposta da ripetere. Prima detta una frase e premi aggiungi alla lista.';
+    speakText(text);
+  });
+  $('saveDictBtn').addEventListener('click', () => {
+    const correct = $('dictCorrect').value.trim();
+    const variants = $('dictVariants').value.split(',').map(x=>x.trim()).filter(Boolean);
+    if (!correct || !variants.length) { setStatus('Inserisci la parola corretta e almeno una variante.'); return; }
+    const existing = dictionary.findIndex(x => normalizeName(x.correct) === normalizeName(correct));
+    const entry = {correct, variants: [...new Set(variants.filter(x => normalizeName(x) !== normalizeName(correct)))]};
+    if (existing >= 0) dictionary[existing] = entry; else dictionary.push(entry);
+    saveDictionary();
+    setStatus('Parola salvata nel vocabolario tecnico.','ok');
+  });
   $('confirmAcceptBtn').addEventListener('click',confirmPending);
   $('confirmEditBtn').addEventListener('click',()=>{$('confirmPanel').hidden=true;$('transcript').focus();});
   $('confirmCancelBtn').addEventListener('click',()=>{pendingItems=[];$('confirmPanel').hidden=true;setStatus('Inserimento annullato. La lista non è stata modificata.');});
@@ -325,8 +396,19 @@
     const parsed=[];
     for(let chunk of chunks) {
       chunk=chunk.replace(/^(aggiungi|aggiungere|mi servono|servono|prendi|prendere|altri|altre|ancora)\s+/i,'').trim();
+      // Formato naturale da cantiere: “Niples da un pollice conico, un pezzo”.
+      // Se quantità/unità sono alla fine, conserva il nome completo dell'articolo.
+      const ending = chunk.match(/\s+(\d+(?:[.,]\d+)?|zero|uno|una|un|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|ventuno|ventidue|ventitre|ventiquattro|venticinque|trenta|quaranta|cinquanta|sessanta|settanta|ottanta|novanta|cento)\s+(pezzi|pezzo|pz|pzi|litri|litro|kg|chili|chilo|grammi|grammo|g|metri|metro|rotoli|rotolo|scatole|scatola|confezioni|confezione|ore|ora)\s*$/i);
+      if (ending) {
+        const name = chunk.slice(0, ending.index).trim();
+        const amountWord = ending[1].toLocaleLowerCase('it-IT');
+        const amount = numberWords[amountWord] ?? Number(amountWord.replace(',','.'));
+        const unitWord = ending[2].toLocaleLowerCase('it-IT');
+        const unit = normalizeUnit(unitWord);
+        if (name && amount > 0) { parsed.push({name, qty:amount, unit}); continue; }
+      }
       const q=parseQuantity(chunk);
-      if(!q || !q.rest) return {ok:false,message:'Non ho riconosciuto quantità e articolo. Prova: “due filtri olio” oppure “tre litri di olio compressore”.'};
+      if(!q || !q.rest) return {ok:false,message:'Non ho riconosciuto quantità e articolo. Prova: “due filtri olio” oppure “Niples da un pollice conico, un pezzo”.'};
       let rest=q.rest.trim();
       // If unit occurs at end: "olio compressore 3 litri" (quantity is taken from start only if it starts the phrase)
       let parsedPart=parseUnitAndName(rest);
@@ -350,7 +432,7 @@
     recognition.onresult=e=>{
       let finalText='', interim='';
       for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)finalText+=t;else interim+=t;}
-      $('transcript').value=(finalText||interim).trim();
+      $('transcript').value=correctTechnicalTerms((finalText||interim).trim());
       if(finalText) setStatus('Frase riconosciuta. Controllala e premi “Aggiungi alla lista”.','ok');
     };
     recognition.onerror=e=>{
@@ -362,6 +444,7 @@
   $('startBtn').addEventListener('click',()=>{if(!recognition)initSpeech();if(recognition){$('transcript').value='';try{recognition.start();}catch(e){setStatus('Attendi un istante e premi di nuovo il microfono.');}}});
   $('stopBtn').addEventListener('click',()=>{if(recognition&&isListening)recognition.stop();});
   $('applySpeechBtn').addEventListener('click',()=>{
+    $('transcript').value = correctTechnicalTerms($('transcript').value);
     const result=parsePhrase($('transcript').value);
     if(!result.ok){setStatus(result.message);return;}
     stageSpeechItems(result.items);
@@ -380,12 +463,12 @@
   $('pdfBtn').addEventListener('click',()=>{
     if(!items.length){alert('Aggiungi almeno un articolo prima di creare il PDF.');return;}
     $('printDate').textContent='Data: '+new Date().toLocaleDateString('it-IT');
-    document.title=($('listTitle').value.trim()||'Lista Materiali').replace(/[\\/:*?"<>|]/g,'-');
+    document.title=($('listTitle').value.trim()||'Rapportino').replace(/[\\/:*?"<>|]/g,'-');
     window.print();
   });
   $('shareBtn').addEventListener('click',async()=>{
     if(!items.length){alert('Aggiungi almeno un articolo prima di condividere.');return;}
-    const title=$('listTitle').value.trim()||'Lista Materiali';
+    const title=$('listTitle').value.trim()||'Rapportino';
     const text=title+'\n'+items.map(it=>`${it.name}: ${fmt(it.qty)} ${it.unit}`).join('\n');
     if(navigator.share){
       try{await navigator.share({title,text});}catch(e){if(e.name!=='AbortError')fallbackCopy(text);}
@@ -396,10 +479,10 @@
     if(!items.length){alert('Aggiungi almeno un articolo prima di scaricare il CSV.');return;}
     const rows=[['Articolo','Quantità','Unità'],...items.map(it=>[it.name,fmt(it.qty),it.unit])];
     const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='lista-materiali.csv';a.click();URL.revokeObjectURL(url);
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rapportino.csv';a.click();URL.revokeObjectURL(url);
   });
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.deferredInstallPrompt=e;});
-  load();initSpeech();
+  load();loadDictionary();initSpeech();
   if('serviceWorker' in navigator && location.protocol.startsWith('http')) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 })();
 </script>

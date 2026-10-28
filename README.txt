@@ -1,28 +1,23 @@
-LISTA MATERIALI PWA - VERSIONE 2
+RAPPORTINO - VERSIONE 3
 
-COME INSTALLARE
+PUBBLICAZIONE
 1. Estrai lo ZIP.
-2. Carica tutti i file su un hosting HTTPS.
-3. Apri l'indirizzo con Chrome su Android e concedi il permesso del microfono.
-4. Dal menu di Chrome scegli "Aggiungi a schermata Home" o "Installa app", se disponibile.
+2. Carica tutti i file nella cartella principale del repository GitHub rapportino, sovrascrivendo i file precedenti.
+3. Attendi la pubblicazione di GitHub Pages. Se l'app è già installata, chiudila e riaprila; potrebbe essere necessario aggiornare la pagina.
 
 FUNZIONI
-- Dettatura vocale in italiano, una frase per volta.
-- Conferma esplicita prima che la dettatura modifichi la lista.
-- Se l'articolo esiste già con la stessa unità, mostra il calcolo del totale prima di confermare.
-- Pulsanti + e − per cambiare le quantità.
-- Eliminazione di una riga con possibilità di annullare entro 8 secondi.
-- Svuotamento della lista con conferma e possibilità di annullare.
-- Modifica manuale, salvataggio locale, esportazione PDF tramite stampa e download CSV.
+- Nome aggiornato a Rapportino.
+- Dettatura vocale in italiano e correzione del testo prima di aggiungerlo.
+- Vocabolario tecnico personalizzabile e salvato sul dispositivo.
+- Vocabolario iniziale: Nibles, Nifles, Nibless, Nibla e Niplez vengono corretti in Niples.
+- Pulsante per leggere a voce la proposta riconosciuta, quando il browser supporta la sintesi vocale.
+- Conferma esplicita prima di aggiornare la lista.
+- Somma automatica della quantità se lo stesso articolo con la stessa unità è già presente.
+- Modifica manuale, pulsanti + e −, eliminazione con annullamento, salvataggio locale, PDF tramite stampa e CSV.
 
-ESEMPI
-- "due filtri olio" -> Filtro olio, 2 pz
-- "altri tre filtri olio" -> proposta totale 2 + 3 = 5 pz, da confermare
-- "tre litri di olio compressore" -> Olio compressore, 3 litri
-
-NOTE
-- La conferma è una schermata interna all'app, non una notifica push del sistema.
+NOTE IMPORTANTI
+- Il vocabolario corregge il testo riconosciuto dopo la trascrizione; non modifica il modello vocale del browser.
+- La lettura vocale usa la voce italiana disponibile sul dispositivo.
 - Il riconoscimento vocale può richiedere Internet e un browser compatibile.
-- Controlla sempre nomi e codici tecnici riconosciuti dal microfono.
-- "Crea PDF" apre la finestra di stampa: scegli "Salva come PDF".
-- La lista viene salvata localmente nel browser del dispositivo.
+- I dati della lista e il vocabolario restano nel browser del dispositivo e non vengono sincronizzati automaticamente tra telefoni.
+- Prima di usare il rapportino definitivo, prova alcune frasi e controlla i risultati.
