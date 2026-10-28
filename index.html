@@ -14,7 +14,7 @@ button{border:0;border-radius:11px;padding:11px 14px;font:600 .97rem system-ui;c
 .list-head,.item{display:grid;grid-template-columns:minmax(0,1fr) 110px 38px;gap:8px;align-items:center}.list-head{font-size:.78rem;color:var(--muted);font-weight:700;padding:0 5px 8px;border-bottom:1px solid var(--line)}.item{padding:11px 2px;border-bottom:1px solid #edf1f3}.item:last-child{border-bottom:0}.item-name{font-weight:650;overflow-wrap:anywhere}.item-sub{font-size:.8rem;color:var(--muted);margin-top:2px}.fa-tag{display:inline-block;margin-left:5px;background:#e7f4f8;color:#12556d;padding:2px 6px;border-radius:6px;font-size:.72rem;font-weight:800}.qty{display:flex;align-items:center;justify-content:flex-end;gap:4px}.qty button{min-height:32px;width:29px;padding:0;background:#eaf5f8;color:var(--navy)}.qty input{width:49px;text-align:center;padding:5px 1px;min-height:34px}.unit-label{font-size:.78rem;color:var(--muted);min-width:15px}.iconbtn{min-height:34px;padding:5px;background:#fff0ef;color:var(--red)}.empty{padding:22px 8px;text-align:center;color:var(--muted)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.hidden{display:none!important}.separator{border:0;border-top:1px solid var(--line);margin:14px 0}.manage-row{display:grid;grid-template-columns:1fr 100px 38px;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid #edf1f3}.manage-row small{color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:.78rem;padding:0 16px 24px}
 @media(max-width:560px){main{padding:10px}.panel{padding:13px}.grid,.add-grid{grid-template-columns:1fr 1fr}.add-grid .field:first-child{grid-column:1/-1}.list-head,.item{grid-template-columns:minmax(0,1fr) 103px 34px;gap:5px}.qty{gap:2px}.qty input{width:38px}.qty button{width:26px}.manage-row{grid-template-columns:1fr 78px 34px}}
 
-
+#printMeta,.print-customer{display:none}
 </style></head>
 <body>
 <header><div class="wrap"><div class="brand"><div class="brand-mark">R</div><div><h1>Rapportino</h1><p>Elenco materiali, quantità e condivisione in PDF</p></div></div></div></header>
@@ -106,16 +106,16 @@ $('articleSelect').addEventListener('change',updateMeasures);$('addBtn').addEven
 function pdfByteString(str){
  let out='';
  for(const ch of str){
-   const cp=ch.codePointAt(0);
-   if(cp<=255) out+=String.fromCharCode(cp);
-   else if(cp===0x20ac) out+=String.fromCharCode(128);
-   else if(cp===0x2013) out+=String.fromCharCode(150);
-   else if(cp===0x2014) out+=String.fromCharCode(151);
-   else if(cp===0x2018) out+=String.fromCharCode(145);
-   else if(cp===0x2019) out+=String.fromCharCode(146);
-   else if(cp===0x201c) out+=String.fromCharCode(147);
-   else if(cp===0x201d) out+=String.fromCharCode(148);
-   else out+='?';
+  const cp=ch.codePointAt(0);
+  if(cp<=255)out+=String.fromCharCode(cp);
+  else if(cp===0x20ac)out+=String.fromCharCode(128);
+  else if(cp===0x2013)out+=String.fromCharCode(150);
+  else if(cp===0x2014)out+=String.fromCharCode(151);
+  else if(cp===0x2018)out+=String.fromCharCode(145);
+  else if(cp===0x2019)out+=String.fromCharCode(146);
+  else if(cp===0x201c)out+=String.fromCharCode(147);
+  else if(cp===0x201d)out+=String.fromCharCode(148);
+  else out+='?';
  }
  return out;
 }
@@ -125,59 +125,54 @@ function makePdfBlob(){
  const customer=$('customer').value.trim();
  const date=$('workDate').value?new Date($('workDate').value+'T12:00:00').toLocaleDateString('it-IT'):today();
  const W=595,H=842,left=48,right=547;
- const pages=[];let cmds=[];
- const text=(x,y,size,value,font='F1')=>cmds.push(`BT /${font} ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${pdfEscape(value)}) Tj ET`);
+ const pages=[]; let cmds=[]; let y=0;
+ const text=(x,yy,size,value,font='F1')=>cmds.push(`BT /${font} ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${yy.toFixed(2)} Tm (${pdfEscape(value)}) Tj ET`);
  const line=(x1,y1,x2,y2,width=.6)=>cmds.push(`${width} w ${x1} ${y1} m ${x2} ${y2} l S`);
- const estimate=(str,size)=>pdfByteString(str).length*size*.51;
- const drawHeader=(first)=>{
-   let y=H-62;
-   if(first){
-     text(left,y,21,title,'F2'); y-=25;
-     if(customer){text(left,y,11,'Cliente: '+customer);y-=17;}
-     text(left,y,11,'Data: '+date);y-=22;
-   } else {
-     text(left,y,14,title,'F2'); y-=24;
-     text(left,y,9,'Continua'); y-=14;
-   }
-   line(left,y,right,y,1);y-=22;
-   text(left,y,10,'MATERIALE','F2');
-   text(right-estimate('QUANTITÀ',10),y,10,'QUANTITÀ','F2');
-   y-=8;line(left,y,right,y,.5);y-=20;
-   return y;
- };
- let y=drawHeader(true);
- const maxLabelWidth=right-left-125;
- const wrapLabel=(label,size=11)=>{
-   const words=label.split(/\s+/);const out=[];let current='';
-   for(const word of words){const test=current?current+' '+word:word;
-     if(estimate(test,size)>maxLabelWidth&&current){out.push(current);current=word}else current=test;}
-   if(current)out.push(current);return out.length?out:[''];
- };
+ const estimate=(str,size)=>pdfByteString(str).length*size*.52;
+ function header(first){
+  y=H-66;
+  text(left,y,21,title,'F2'); y-=27;
+  if(first){
+   if(customer){text(left,y,11,'Cliente: '+customer);y-=17;}
+   text(left,y,11,'Data: '+date);y-=23;
+  } else {text(left,y,10,'Continua');y-=21;}
+  line(left,y,right,y,1);y-=23;
+  text(left,y,10,'MATERIALE','F2');
+  text(right-estimate('QUANTITÀ',10),y,10,'QUANTITÀ','F2');
+  y-=9;line(left,y,right,y,.5);y-=20;
+ }
+ header(true);
+ const maxLabelWidth=right-left-110;
+ function wrap(label){
+  const words=label.split(/\s+/),out=[];let cur='';
+  for(const word of words){const test=cur?cur+' '+word:word;if(estimate(test,11)>maxLabelWidth&&cur){out.push(cur);cur=word}else cur=test}
+  if(cur)out.push(cur);return out.length?out:[''];
+ }
  for(const it of items){
-   const label=itemLabel(it)+(it.fa?'  [FA]':'');
-   const qty=fmt(it.qty)+' '+it.unit;
-   const lines=wrapLabel(label,11);const rowHeight=Math.max(25,lines.length*14+9);
-   if(y-rowHeight<58){pages.push(cmds.join('\n'));cmds=[];y=drawHeader(false);}
-   lines.forEach((ln,i)=>text(left,y-i*14,11,ln,'F1'));
-   text(right-estimate(qty,11),y,11,qty,'F1');
-   y-=rowHeight;line(left,y+7,right,y+7,.35);
+  const label=itemLabel(it)+(it.fa?'  [FA]':'');
+  const qty=fmt(it.qty)+' '+it.unit;
+  const labelLines=wrap(label);
+  const rowHeight=Math.max(26,labelLines.length*14+10);
+  if(y-rowHeight<58){pages.push(cmds.join('\n'));cmds=[];header(false);}
+  labelLines.forEach((ln,i)=>text(left,y-i*14,11,ln,'F1'));
+  text(right-estimate(qty,11),y,11,qty,'F1');
+  y-=rowHeight;line(left,y+7,right,y+7,.35);
  }
  pages.push(cmds.join('\n'));
- const objs=[];const addObj=body=>{objs.push(body);return objs.length};
- const catalogId=addObj('');const pagesId=addObj('');
- const font1=addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
- const font2=addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+ const objs=[];const add=body=>{objs.push(body);return objs.length};
+ const catalogId=add('');const pagesId=add('');
+ const f1=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+ const f2=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
  const pageIds=[];
- for(const pageContent of pages){
-   const streamBytes=pdfByteString(pageContent);
-   const streamId=addObj(`<< /Length ${streamBytes.length} >>\nstream\n${pageContent}\nendstream`);
-   const pageId=addObj(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${font1} 0 R /F2 ${font2} 0 R >> >> /Contents ${streamId} 0 R >>`);
-   pageIds.push(pageId);
+ for(const content of pages){
+  const stream=pdfByteString(content);
+  const streamId=add(`<< /Length ${stream.length} >>\nstream\n${content}\nendstream`);
+  pageIds.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${streamId} 0 R >>`));
  }
  objs[catalogId-1]=`<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
  objs[pagesId-1]=`<< /Type /Pages /Kids [${pageIds.map(id=>id+' 0 R').join(' ')}] /Count ${pageIds.length} >>`;
  let pdf='%PDF-1.4\n%âãÏÓ\n';const offsets=[0];
- for(let i=0;i<objs.length;i++){offsets.push(pdfByteString(pdf).length);pdf+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`;}
+ for(let i=0;i<objs.length;i++){offsets.push(pdfByteString(pdf).length);pdf+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}
  const xref=pdfByteString(pdf).length;pdf+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;
  for(let i=1;i<offsets.length;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
  pdf+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
@@ -185,13 +180,16 @@ function makePdfBlob(){
  return new Blob([bytes],{type:'application/pdf'});
 }
 function safeFilename(s){return (s||'rapportino').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'rapportino'}
-function downloadPdf(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+function downloadPdf(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function createPdfOrAlert(){if(!items.length){alert('Aggiungi almeno un materiale prima di creare il PDF.');return null}return makePdfBlob()}
-$('pdfBtn').addEventListener('click',()=>{const blob=createPdfOrAlert();if(!blob)return;downloadPdf(blob,safeFilename($('listTitle').value.trim())+'.pdf');});
+$('pdfBtn').addEventListener('click',()=>{const blob=createPdfOrAlert();if(blob)downloadPdf(blob,safeFilename($('listTitle').value.trim())+'.pdf')});
 $('shareBtn').addEventListener('click',async()=>{
- const blob=createPdfOrAlert();if(!blob)return;const filename=safeFilename($('listTitle').value.trim())+'.pdf';
+ const blob=createPdfOrAlert();if(!blob)return;
+ const filename=safeFilename($('listTitle').value.trim())+'.pdf';
  const file=new File([blob],filename,{type:'application/pdf'});
- if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:$('listTitle').value.trim()||'Rapportino',files:[file]});return}catch(e){if(e.name==='AbortError')return}}
+ if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  try{await navigator.share({title:$('listTitle').value.trim()||'Rapportino',files:[file]});return}catch(e){if(e.name==='AbortError')return}
+ }
  downloadPdf(blob,filename);alert('Il PDF è stato scaricato. Puoi allegarlo in WhatsApp, email o un’altra app.');
 });
 $('csvBtn').addEventListener('click',()=>{if(!items.length){alert('Aggiungi almeno un materiale prima di scaricare il CSV.');return}const rows=[['Articolo','Misura / tipo','Quantità','Unità','FA'],...items.map(it=>[it.name,it.measure||'',fmt(it.qty),it.unit,it.fa?'Sì':''])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rapportino.csv';a.click();URL.revokeObjectURL(url)});
