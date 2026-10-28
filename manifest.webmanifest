@@ -1,7 +1,7 @@
 {
-  "name": "Rapportino - Dettatura vocale",
+  "name": "Rapportino",
   "short_name": "Rapportino",
-  "description": "Crea rapportini di materiali con la voce ed esportali in PDF.",
+  "description": "Crea rapportini di materiali ed esportali in PDF.",
   "lang": "it-IT",
   "start_url": "./index.html",
   "scope": "./",

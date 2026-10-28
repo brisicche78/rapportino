@@ -1,23 +1,27 @@
-RAPPORTINO - VERSIONE 3
+RAPPORTINO — VERSIONE 4 (SENZA DETTATURA VOCALE)
 
-PUBBLICAZIONE
-1. Estrai lo ZIP.
-2. Carica tutti i file nella cartella principale del repository GitHub rapportino, sovrascrivendo i file precedenti.
-3. Attendi la pubblicazione di GitHub Pages. Se l'app è già installata, chiudila e riaprila; potrebbe essere necessario aggiornare la pagina.
+PUBBLICAZIONE SU GITHUB PAGES
+1. Estrai lo ZIP sul computer.
+2. Apri il repository GitHub rapportino.
+3. Carica i file index.html, manifest.webmanifest, sw.js, icon.svg e README.txt nella cartella principale, sostituendo quelli precedenti.
+4. Attendi l'aggiornamento di GitHub Pages.
+5. Se l'app è installata sul telefono, chiudila e riaprila. Se mostra ancora la vecchia versione, apri la pagina web e aggiorna; potrebbe essere necessario chiudere completamente il browser.
 
 FUNZIONI
-- Nome aggiornato a Rapportino.
-- Dettatura vocale in italiano e correzione del testo prima di aggiungerlo.
-- Vocabolario tecnico personalizzabile e salvato sul dispositivo.
-- Vocabolario iniziale: Nibles, Nifles, Nibless, Nibla e Niplez vengono corretti in Niples.
-- Pulsante per leggere a voce la proposta riconosciuta, quando il browser supporta la sintesi vocale.
-- Conferma esplicita prima di aggiornare la lista.
-- Somma automatica della quantità se lo stesso articolo con la stessa unità è già presente.
-- Modifica manuale, pulsanti + e −, eliminazione con annullamento, salvataggio locale, PDF tramite stampa e CSV.
+- Inserimento manuale da menu a tendina, senza dettatura vocale.
+- Dati del rapportino: titolo, cliente e data.
+- Catalogo iniziale con raccordi, niples, valvole, scaricatori, prese industriali e cavo elettrico.
+- Scelta separata della misura/tipo dopo la selezione dell'articolo.
+- Cavo elettrico gestito in metri, con sezioni iniziali modificabili.
+- Casella FA per materiale preso dal magazzino del furgone; la spunta si azzera dopo ogni inserimento.
+- La sigla FA appare soltanto per le righe contrassegnate FA.
+- Le quantità si sommano se articolo, misura, unità e stato FA coincidono.
+- Gestione catalogo: aggiunta, modifica ed eliminazione degli articoli e delle varianti.
+- Modifica rapida quantità con +/−, eliminazione righe e ordinamento A–Z.
+- PDF tramite stampa del browser, condivisione testo e download CSV per Excel.
+- Salvataggio automatico locale sul dispositivo.
 
-NOTE IMPORTANTI
-- Il vocabolario corregge il testo riconosciuto dopo la trascrizione; non modifica il modello vocale del browser.
-- La lettura vocale usa la voce italiana disponibile sul dispositivo.
-- Il riconoscimento vocale può richiedere Internet e un browser compatibile.
-- I dati della lista e il vocabolario restano nel browser del dispositivo e non vengono sincronizzati automaticamente tra telefoni.
-- Prima di usare il rapportino definitivo, prova alcune frasi e controlla i risultati.
+NOTE
+- I dati vengono conservati nel browser del dispositivo e non si sincronizzano automaticamente con altri telefoni.
+- Il PDF si crea scegliendo “Salva come PDF” nella finestra di stampa.
+- Le misure e le varianti del catalogo sono iniziali e vanno adattate ai materiali effettivamente usati.
