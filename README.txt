@@ -23,5 +23,5 @@ FUNZIONI
 
 NOTE
 - I dati vengono conservati nel browser del dispositivo e non si sincronizzano automaticamente con altri telefoni.
-- Il pulsante “Condividi PDF” genera un PDF da condividere direttamente se il telefono/browser lo supporta; altrimenti scarica il PDF da allegare manualmente. Il pulsante “Crea PDF” apre anche la stampa del browser.
+- I pulsanti “Crea PDF” e “Condividi PDF” usano lo stesso generatore e lo stesso impaginato. “Crea PDF” scarica il documento; “Condividi PDF” apre la condivisione file se supportata, altrimenti scarica il documento.
 - Le misure e le varianti del catalogo sono iniziali e vanno adattate ai materiali effettivamente usati.
