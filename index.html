@@ -42,7 +42,7 @@ button{border:0;border-radius:11px;padding:11px 14px;font:600 .97rem system-ui;c
 <h2>3. Elenco materiali</h2><div id="printMeta"></div><div class="print-customer" id="printCustomer"></div>
 <div class="list-head"><div>ARTICOLO</div><div style="text-align:right">QUANTITÀ</div><div class="actions-col"></div></div>
 <div id="itemsList"><div class="empty">La lista è vuota. Aggiungi il primo materiale.</div></div>
-<div class="small-actions no-print"><button class="light" id="sortBtn">Ordina A–Z</button><button class="danger" id="clearBtn">Svuota lista</button></div>
+<div class="small-actions no-print"><button class="light" id="sortBtn">Ordina A–Z</button><button class="danger" id="clearBtn">Svuota lista</button><button class="light" id="newWorkBtn">＋ Nuovo lavoro</button></div>
 </section>
 <section class="panel hidden" id="managePanel">
 <h2>Gestisci articoli</h2><p class="muted">Aggiungi, rinomina o elimina voci dal catalogo. Le misure sono modificabili per ogni articolo.</p>
@@ -102,7 +102,25 @@ function renderManage(){$('manageList').innerHTML=catalog.map((a,i)=>`<div class
 function saveArticle(){const name=$('manageName').value.trim();if(!name){alert('Inserisci il nome dell’articolo.');return}const measures=$('manageMeasures').value.split(',').map(x=>x.trim()).filter(Boolean);const entry={name,unit:$('manageUnit').value,measures};const duplicate=catalog.findIndex((a,i)=>norm(a.name)===norm(name)&&i!==editingIndex);if(duplicate>=0){alert('Esiste già un articolo con questo nome.');return}if(editingIndex>=0)catalog[editingIndex]=entry;else catalog.push(entry);catalog.sort((a,b)=>a.name.localeCompare(b.name,'it'));editingIndex=-1;$('manageName').value='';$('manageMeasures').value='';$('manageUnit').value='pz';$('saveArticleBtn').textContent='Salva articolo';saveCatalog();renderArticleSelect();renderManage()}
 function reportText(){const title=$('listTitle').value.trim()||'Rapportino';const customer=$('customer').value.trim();const date=$('workDate').value?new Date($('workDate').value+'T12:00:00').toLocaleDateString('it-IT'):today();return [title,customer?'Cliente: '+customer:'', 'Data: '+date,'',...items.map(it=>`${itemLabel(it)}${it.fa?' (FA)':''}: ${fmt(it.qty)} ${it.unit}`)].filter((x,i)=>x!==''||i<3).join('\n')}
 $('articleSelect').addEventListener('change',updateMeasures);$('addBtn').addEventListener('click',addCurrent);$('newArticleBtn').addEventListener('click',openManage);$('manageBtn').addEventListener('click',openManage);$('closeManageBtn').addEventListener('click',()=>$('managePanel').classList.add('hidden'));$('saveArticleBtn').addEventListener('click',saveArticle);$('cancelEditBtn').addEventListener('click',()=>{editingIndex=-1;$('manageName').value='';$('manageMeasures').value='';$('manageUnit').value='pz';$('saveArticleBtn').textContent='Salva articolo'});
-['listTitle','customer','workDate'].forEach(id=>$(id).addEventListener('input',save));$('sortBtn').addEventListener('click',()=>{items.sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b),'it'));renderItems()});$('clearBtn').addEventListener('click',()=>{if(confirm('Vuoi svuotare tutto il rapportino?')){items=[];renderItems()}});
+['listTitle','customer','workDate'].forEach(id=>$(id).addEventListener('input',save));$('sortBtn').addEventListener('click',()=>{items.sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b),'it'));renderItems()});$('clearBtn').addEventListener('click',()=>{if(confirm('Vuoi svuotare l’elenco dei materiali? I dati del lavoro resteranno invariati.')){items=[];renderItems()}});
+$('newWorkBtn').addEventListener('click',()=>{
+ if(!confirm('Vuoi iniziare un nuovo lavoro? Verranno cancellati il nome del rapportino, il cliente e tutti i materiali. La data sarà impostata a oggi. Il catalogo articoli resterà invariato.'))return;
+ $('listTitle').value='';
+ $('customer').value='';
+ $('workDate').value=today();
+ $('quantity').value='1';
+ $('fa').checked=false;
+ items=[];
+ $('managePanel').classList.add('hidden');
+ editingIndex=-1;
+ $('manageName').value='';
+ $('manageMeasures').value='';
+ $('manageUnit').value='pz';
+ $('saveArticleBtn').textContent='Salva articolo';
+ save();
+ renderItems();
+ window.scrollTo({top:0,behavior:'smooth'});
+});
 function pdfByteString(str){
  let out='';
  for(const ch of str){
