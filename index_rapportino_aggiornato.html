@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123047"><meta name="description" content="Crea rapportini materiali, esportali in PDF e condividili.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Rapportino</title>
+<style>
+:root{color-scheme:light;--navy:#123047;--blue:#087ea4;--pale:#eaf5f8;--line:#d9e3e8;--ink:#17252e;--muted:#60717b;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:#f3f6f8;color:var(--ink);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--navy);color:white;padding:18px 16px}header .wrap,main{max-width:800px;margin:auto}.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:42px;height:42px;border-radius:12px;background:#e2f6fb;color:var(--navy);display:grid;place-items:center;font-size:23px;font-weight:800}h1{font-size:1.35rem;margin:0}header p{margin:3px 0 0;color:#cfe3ed;font-size:.92rem}
+main{padding:15px;display:grid;gap:13px}.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 3px 12px #12304708}h2{font-size:1.03rem;margin:0 0 12px}.muted,.note{color:var(--muted);font-size:.88rem}.note{margin:9px 0 0}label{display:block;font-size:.85rem;font-weight:650;margin:0 0 5px}input,select{width:100%;min-width:0;border:1px solid #cbd8de;border-radius:9px;padding:10px;font:inherit;background:white;color:var(--ink);min-height:43px}input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid #69c8e5;outline-offset:2px}
+button{border:0;border-radius:11px;padding:11px 14px;font:600 .97rem system-ui;cursor:pointer;min-height:44px}.primary{background:var(--blue);color:white}.dark{background:var(--navy);color:white}.light{background:var(--pale);color:var(--navy)}.danger{background:#fff0ef;color:var(--red)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{min-width:0}.full{grid-column:1/-1}.add-grid{display:grid;grid-template-columns:1.3fr 1fr .7fr;gap:10px;align-items:end}.fa-row{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px;background:#f5f9fa;border-radius:10px}.fa-row input{width:20px;min-height:20px;height:20px;accent-color:var(--blue)}.fa-row label{margin:0;font-size:.95rem}.small-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.small-actions button{min-height:37px;padding:7px 10px;font-size:.86rem}
+.list-head,.item{display:grid;grid-template-columns:minmax(0,1fr) 110px 38px;gap:8px;align-items:center}.list-head{font-size:.78rem;color:var(--muted);font-weight:700;padding:0 5px 8px;border-bottom:1px solid var(--line)}.item{padding:11px 2px;border-bottom:1px solid #edf1f3}.item:last-child{border-bottom:0}.item-name{font-weight:650;overflow-wrap:anywhere}.item-sub{font-size:.8rem;color:var(--muted);margin-top:2px}.fa-tag{display:inline-block;margin-left:5px;background:#e7f4f8;color:#12556d;padding:2px 6px;border-radius:6px;font-size:.72rem;font-weight:800}.qty{display:flex;align-items:center;justify-content:flex-end;gap:4px}.qty button{min-height:32px;width:29px;padding:0;background:#eaf5f8;color:var(--navy)}.qty input{width:49px;text-align:center;padding:5px 1px;min-height:34px}.unit-label{font-size:.78rem;color:var(--muted);min-width:15px}.iconbtn{min-height:34px;padding:5px;background:#fff0ef;color:var(--red)}.empty{padding:22px 8px;text-align:center;color:var(--muted)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.hidden{display:none!important}.separator{border:0;border-top:1px solid var(--line);margin:14px 0}.manage-row{display:grid;grid-template-columns:1fr 100px 38px;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid #edf1f3}.manage-row small{color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:.78rem;padding:0 16px 24px}
+@media(max-width:560px){main{padding:10px}.panel{padding:13px}.grid,.add-grid{grid-template-columns:1fr 1fr}.add-grid .field:first-child{grid-column:1/-1}.list-head,.item{grid-template-columns:minmax(0,1fr) 103px 34px;gap:5px}.qty{gap:2px}.qty input{width:38px}.qty button{width:26px}.manage-row{grid-template-columns:1fr 78px 34px}}
+
+#printMeta,.print-customer{display:none}
+</style></head>
+<body>
+<header><div class="wrap"><div class="brand"><div class="brand-mark">R</div><div><h1>Rapportino</h1><p>Elenco materiali, quantità e condivisione in PDF</p></div></div></div></header>
+<main>
+<section class="panel" id="setupPanel">
+<h2>1. Dati del rapportino</h2>
+<div class="grid">
+<div class="field full"><label for="listTitle">Nome del rapportino</label><input id="listTitle" maxlength="120" placeholder="Es. Materiali impianto aria compressa"></div>
+<div class="field full"><label for="customer">Cliente</label><input id="customer" maxlength="120" placeholder="Nome cliente"></div>
+<div class="field"><label for="workDate">Data</label><input id="workDate" type="date"></div>
+</div>
+</section>
+<section class="panel" id="addPanel">
+<h2>2. Aggiungi materiale</h2>
+<div class="add-grid">
+<div class="field"><label for="articleSelect">Articolo</label><select id="articleSelect"></select></div>
+<div class="field" id="measureField"><label for="measureSelect">Misura / tipo</label><select id="measureSelect"></select></div>
+<div class="field"><label for="quantity">Quantità</label><input id="quantity" type="number" min="0.01" step="any" value="1"></div>
+</div>
+<div class="fa-row"><input id="fa" type="checkbox"><label for="fa">FA — materiale prelevato dal magazzino del furgone</label></div>
+<div class="actions" style="margin-top:12px"><button class="primary" id="addBtn">+ Aggiungi articolo</button><button class="light" id="newArticleBtn">+ Nuovo articolo</button></div>
+<p class="note">Le quantità si sommano nella stessa riga solo se articolo, misura e stato FA coincidono. La spunta FA si azzera dopo ogni inserimento.</p>
+</section>
+<section class="panel" id="listPanel">
+<h2>3. Elenco materiali</h2><div id="printMeta"></div><div class="print-customer" id="printCustomer"></div>
+<div class="list-head"><div>ARTICOLO</div><div style="text-align:right">QUANTITÀ</div><div class="actions-col"></div></div>
+<div id="itemsList"><div class="empty">La lista è vuota. Aggiungi il primo materiale.</div></div>
+<div class="small-actions no-print"><button class="light" id="sortBtn">Ordina A–Z</button><button class="danger" id="clearBtn">Svuota lista</button><button class="light" id="newWorkBtn">＋ Nuovo lavoro</button></div>
+</section>
+<section class="panel hidden" id="managePanel">
+<h2>Gestisci articoli</h2><p class="muted">Aggiungi, rinomina o elimina voci dal catalogo. Le misure sono modificabili per ogni articolo.</p>
+<div class="grid"><div class="field"><label for="manageName">Nome articolo</label><input id="manageName" placeholder="Es. Curva MF"></div><div class="field"><label for="manageUnit">Quantità normalmente espressa in</label><select id="manageUnit"><option value="pz">Pezzi (pz)</option><option value="m">Metri (m)</option></select></div><div class="field full"><label for="manageMeasures">Misure / varianti (separate da virgola)</label><input id="manageMeasures" placeholder='Es. 1/2", 3/4", 1", 1" 1/2'></div></div>
+<div class="actions" style="margin-top:10px"><button class="primary" id="saveArticleBtn">Salva articolo</button><button class="light" id="cancelEditBtn">Annulla modifica</button></div>
+<div id="manageList" style="margin-top:12px"></div>
+<div class="small-actions"><button class="light" id="closeManageBtn">Chiudi gestione</button></div>
+</section>
+<section class="panel no-print" id="actionsPanel"><h2>4. Esporta e condividi</h2><div class="actions"><button class="primary" id="pdfBtn">📄 Crea PDF</button><button class="dark" id="shareBtn">↗ Condividi PDF</button><button class="light full" id="csvBtn">Scarica CSV per Excel</button><button class="light full" id="manageBtn">⚙ Gestisci articoli</button></div><p class="note">“Crea PDF” e “Condividi PDF” usano lo stesso modello grafico. Se la condivisione diretta non è supportata, il PDF viene scaricato. La lista e il catalogo vengono salvati su questo dispositivo.</p></section>
+</main><footer>Rapportino · I dati restano nel browser di questo dispositivo.</footer>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const STORAGE='rapportino_data_v4', CATALOG='rapportino_catalog_v4';
+const defaultMeasures=['1/4"','3/8"','1/2"','3/4"','1"','1" 1/4','1" 1/2','2"'];
+const initial=[
+{name:'Raccordo a T',unit:'pz',measures:defaultMeasures},
+{name:'Curva MF',unit:'pz',measures:defaultMeasures},
+{name:'Curva FF',unit:'pz',measures:defaultMeasures},
+{name:'Riduzione',unit:'pz',measures:defaultMeasures},
+{name:'Niples',unit:'pz',measures:defaultMeasures},
+{name:'Niples ridotto',unit:'pz',measures:['1/2" × 1/4"','3/4" × 1/2"','1" × 1/2"','1" × 3/4"','Altra misura']},
+{name:'MR',unit:'pz',measures:defaultMeasures},
+{name:'Scaricatore',unit:'pz',measures:['Automatico','Manuale','Elettronico','Altro modello']},
+{name:'Presa industriale 220 V',unit:'pz',measures:['16 A','32 A','Altro tipo']},
+{name:'Presa industriale 400 V',unit:'pz',measures:['16 A','32 A','63 A','Altro tipo']},
+{name:'MR a T',unit:'pz',measures:defaultMeasures},
+{name:'Valvola MF',unit:'pz',measures:defaultMeasures},
+{name:'Valvola FF',unit:'pz',measures:defaultMeasures},
+{name:'Bocchettone',unit:'pz',measures:defaultMeasures},
+{name:'Niples conico',unit:'pz',measures:defaultMeasures},
+{name:'Cavo elettrico',unit:'m',measures:['2 × 1,5 mm²','3 × 1,5 mm²','3 × 2,5 mm²','3 × 4 mm²','3 × 6 mm²','3 × 10 mm²','4 × 6 mm²','4 × 10 mm²','Altro']}
+];
+let catalog=[],items=[],editingIndex=-1;
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const norm=s=>String(s||'').trim().toLocaleLowerCase('it-IT').replace(/\s+/g,' ');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number.isInteger(Number(n))?String(Number(n)):String(Number(n)).replace('.',',');
+function save(){try{localStorage.setItem(STORAGE,JSON.stringify({items,title:$('listTitle').value,customer:$('customer').value,date:$('workDate').value}))}catch(e){}}
+function load(){try{const c=JSON.parse(localStorage.getItem(CATALOG)||'null');catalog=Array.isArray(c)&&c.length?c:structuredClone(initial)}catch(e){catalog=structuredClone(initial)}
+try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');items=Array.isArray(d.items)?d.items:[];$('listTitle').value=d.title||'';$('customer').value=d.customer||'';$('workDate').value=d.date||today()}catch(e){items=[];$('workDate').value=today()}
+saveCatalog();renderArticleSelect();renderItems();}
+function saveCatalog(){try{localStorage.setItem(CATALOG,JSON.stringify(catalog))}catch(e){}}
+function renderArticleSelect(){const sel=$('articleSelect');sel.innerHTML=catalog.map((a,i)=>`<option value="${i}">${esc(a.name)}</option>`).join('');if(!catalog.length)sel.innerHTML='<option value="">Aggiungi un articolo</option>';updateMeasures();}
+function updateMeasures(){const a=catalog[Number($('articleSelect').value)];const field=$('measureField'),sel=$('measureSelect');if(!a){sel.innerHTML='<option value="">Nessuna misura</option>';return}
+const measures=Array.isArray(a.measures)?a.measures:[];if(!measures.length){field.classList.add('hidden');sel.innerHTML='<option value="">—</option>'}else{field.classList.remove('hidden');sel.innerHTML=measures.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}}
+function itemLabel(it){return it.name+(it.measure?' '+it.measure:'')}
+function renderItems(){const host=$('itemsList');if(!items.length){host.innerHTML='<div class="empty">La lista è vuota. Aggiungi il primo materiale.</div>';save();return}
+host.innerHTML=items.map((it,i)=>`<div class="item" data-i="${i}"><div><div class="item-name">${esc(it.name)}${it.measure?' '+esc(it.measure):''}${it.fa?' <span class="fa-tag">FA</span>':''}</div><div class="item-sub">${esc(it.unit==='m'?'Cavo / quantità in metri':it.unit==='pz'?'Quantità in pezzi':'Unità: '+it.unit)}</div></div><div class="qty"><button class="minus" aria-label="Diminuisci">−</button><input class="qty-input" type="number" min="0.01" step="any" value="${esc(it.qty)}" aria-label="Quantità"><span class="unit-label">${esc(it.unit)}</span><button class="plus" aria-label="Aumenta">+</button></div><button class="iconbtn del" aria-label="Elimina">✕</button></div>`).join('');
+host.querySelectorAll('.item').forEach(row=>{const i=+row.dataset.i;row.querySelector('.qty-input').addEventListener('change',e=>{const n=Number(e.target.value);if(n>0){items[i].qty=n;save()}else e.target.value=items[i].qty});row.querySelector('.minus').addEventListener('click',()=>{items[i].qty=Math.round((Number(items[i].qty)-1)*1000)/1000;if(items[i].qty<=0)items.splice(i,1);renderItems()});row.querySelector('.plus').addEventListener('click',()=>{items[i].qty=Math.round((Number(items[i].qty)+1)*1000)/1000;renderItems()});row.querySelector('.del').addEventListener('click',()=>{items.splice(i,1);renderItems()})});save()}
+function addCurrent(){const a=catalog[Number($('articleSelect').value)];if(!a){alert('Prima aggiungi un articolo al catalogo.');return}const measure=($('measureField').classList.contains('hidden')?'':$('measureSelect').value);const qty=Number($('quantity').value);if(!(qty>0)){alert('Inserisci una quantità valida.');return}
+const fa=$('fa').checked;const key=[norm(a.name),norm(measure),a.unit,fa].join('|');const existing=items.find(it=>[norm(it.name),norm(it.measure),it.unit,it.fa===true].join('|')===key);
+if(existing)existing.qty=Math.round((Number(existing.qty)+qty)*1000)/1000;else items.push({name:a.name,measure,unit:a.unit,qty,fa});
+$('quantity').value='1';$('fa').checked=false;renderItems()}
+function openManage(){editingIndex=-1;$('manageName').value='';$('manageUnit').value='pz';$('manageMeasures').value='';$('managePanel').classList.remove('hidden');renderManage();$('managePanel').scrollIntoView({behavior:'smooth',block:'start'})}
+function renderManage(){$('manageList').innerHTML=catalog.map((a,i)=>`<div class="manage-row"><div><strong>${esc(a.name)}</strong><br><small>${esc(a.unit==='m'?'Metri':'Pezzi')} · ${esc((a.measures||[]).join(', ')||'senza misura')}</small></div><button class="light edit" data-i="${i}">Modifica</button><button class="danger remove" data-i="${i}" aria-label="Elimina">✕</button></div>`).join('');$('manageList').querySelectorAll('.edit').forEach(b=>b.onclick=()=>{editingIndex=+b.dataset.i;const a=catalog[editingIndex];$('manageName').value=a.name;$('manageUnit').value=a.unit;$('manageMeasures').value=(a.measures||[]).join(', ');$('saveArticleBtn').textContent='Salva modifiche';$('manageName').focus()});$('manageList').querySelectorAll('.remove').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(confirm('Eliminare "'+catalog[i].name+'" dal catalogo? Gli articoli già nel rapportino non verranno eliminati.')){catalog.splice(i,1);saveCatalog();renderArticleSelect();renderManage()}})}
+function saveArticle(){const name=$('manageName').value.trim();if(!name){alert('Inserisci il nome dell’articolo.');return}const measures=$('manageMeasures').value.split(',').map(x=>x.trim()).filter(Boolean);const entry={name,unit:$('manageUnit').value,measures};const duplicate=catalog.findIndex((a,i)=>norm(a.name)===norm(name)&&i!==editingIndex);if(duplicate>=0){alert('Esiste già un articolo con questo nome.');return}if(editingIndex>=0)catalog[editingIndex]=entry;else catalog.push(entry);catalog.sort((a,b)=>a.name.localeCompare(b.name,'it'));editingIndex=-1;$('manageName').value='';$('manageMeasures').value='';$('manageUnit').value='pz';$('saveArticleBtn').textContent='Salva articolo';saveCatalog();renderArticleSelect();renderManage()}
+function reportText(){const title=$('listTitle').value.trim()||'Rapportino';const customer=$('customer').value.trim();const date=$('workDate').value?new Date($('workDate').value+'T12:00:00').toLocaleDateString('it-IT'):today();return [title,customer?'Cliente: '+customer:'', 'Data: '+date,'',...items.map(it=>`${itemLabel(it)}${it.fa?' (FA)':''}: ${fmt(it.qty)} ${it.unit}`)].filter((x,i)=>x!==''||i<3).join('\n')}
+$('articleSelect').addEventListener('change',updateMeasures);$('addBtn').addEventListener('click',addCurrent);$('newArticleBtn').addEventListener('click',openManage);$('manageBtn').addEventListener('click',openManage);$('closeManageBtn').addEventListener('click',()=>$('managePanel').classList.add('hidden'));$('saveArticleBtn').addEventListener('click',saveArticle);$('cancelEditBtn').addEventListener('click',()=>{editingIndex=-1;$('manageName').value='';$('manageMeasures').value='';$('manageUnit').value='pz';$('saveArticleBtn').textContent='Salva articolo'});
+['listTitle','customer','workDate'].forEach(id=>$(id).addEventListener('input',save));$('sortBtn').addEventListener('click',()=>{items.sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b),'it'));renderItems()});$('clearBtn').addEventListener('click',()=>{if(confirm('Vuoi svuotare l’elenco dei materiali? I dati del lavoro resteranno invariati.')){items=[];renderItems()}});
+$('newWorkBtn').addEventListener('click',()=>{
+ if(!confirm('Vuoi iniziare un nuovo lavoro? Verranno cancellati il nome del rapportino, il cliente e tutti i materiali. La data sarà impostata a oggi. Il catalogo articoli resterà invariato.'))return;
+ $('listTitle').value='';
+ $('customer').value='';
+ $('workDate').value=today();
+ $('quantity').value='1';
+ $('fa').checked=false;
+ items=[];
+ $('managePanel').classList.add('hidden');
+ editingIndex=-1;
+ $('manageName').value='';
+ $('manageMeasures').value='';
+ $('manageUnit').value='pz';
+ $('saveArticleBtn').textContent='Salva articolo';
+ save();
+ renderItems();
+ window.scrollTo({top:0,behavior:'smooth'});
+});
+function pdfByteString(str){
+ let out='';
+ for(const ch of str){
+  const cp=ch.codePointAt(0);
+  if(cp<=255)out+=String.fromCharCode(cp);
+  else if(cp===0x20ac)out+=String.fromCharCode(128);
+  else if(cp===0x2013)out+=String.fromCharCode(150);
+  else if(cp===0x2014)out+=String.fromCharCode(151);
+  else if(cp===0x2018)out+=String.fromCharCode(145);
+  else if(cp===0x2019)out+=String.fromCharCode(146);
+  else if(cp===0x201c)out+=String.fromCharCode(147);
+  else if(cp===0x201d)out+=String.fromCharCode(148);
+  else out+='?';
+ }
+ return out;
+}
+function pdfEscape(str){return pdfByteString(str).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
+function makePdfBlob(){
+ const title=$('listTitle').value.trim()||'Rapportino';
+ const customer=$('customer').value.trim();
+ const date=$('workDate').value?new Date($('workDate').value+'T12:00:00').toLocaleDateString('it-IT'):today();
+ const W=595,H=842,left=48,right=547;
+ const pages=[]; let cmds=[]; let y=0;
+ const text=(x,yy,size,value,font='F1')=>cmds.push(`BT /${font} ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${yy.toFixed(2)} Tm (${pdfEscape(value)}) Tj ET`);
+ const line=(x1,y1,x2,y2,width=.6)=>cmds.push(`${width} w ${x1} ${y1} m ${x2} ${y2} l S`);
+ const estimate=(str,size)=>pdfByteString(str).length*size*.52;
+ function header(first){
+  y=H-66;
+  text(left,y,21,title,'F2'); y-=27;
+  if(first){
+   if(customer){text(left,y,11,'Cliente: '+customer);y-=17;}
+   text(left,y,11,'Data: '+date);y-=23;
+  } else {text(left,y,10,'Continua');y-=21;}
+  line(left,y,right,y,1);y-=23;
+  text(left,y,10,'MATERIALE','F2');
+  text(right-estimate('QUANTITÀ',10),y,10,'QUANTITÀ','F2');
+  y-=9;line(left,y,right,y,.5);y-=20;
+ }
+ header(true);
+ const maxLabelWidth=right-left-110;
+ function wrap(label){
+  const words=label.split(/\s+/),out=[];let cur='';
+  for(const word of words){const test=cur?cur+' '+word:word;if(estimate(test,11)>maxLabelWidth&&cur){out.push(cur);cur=word}else cur=test}
+  if(cur)out.push(cur);return out.length?out:[''];
+ }
+ for(const it of items){
+  const label=itemLabel(it)+(it.fa?'  [FA]':'');
+  const qty=fmt(it.qty)+' '+it.unit;
+  const labelLines=wrap(label);
+  const rowHeight=Math.max(26,labelLines.length*14+10);
+  if(y-rowHeight<58){pages.push(cmds.join('\n'));cmds=[];header(false);}
+  labelLines.forEach((ln,i)=>text(left,y-i*14,11,ln,'F1'));
+  text(right-estimate(qty,11),y,11,qty,'F1');
+  y-=rowHeight;line(left,y+7,right,y+7,.35);
+ }
+ pages.push(cmds.join('\n'));
+ const objs=[];const add=body=>{objs.push(body);return objs.length};
+ const catalogId=add('');const pagesId=add('');
+ const f1=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+ const f2=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+ const pageIds=[];
+ for(const content of pages){
+  const stream=pdfByteString(content);
+  const streamId=add(`<< /Length ${stream.length} >>\nstream\n${content}\nendstream`);
+  pageIds.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${streamId} 0 R >>`));
+ }
+ objs[catalogId-1]=`<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+ objs[pagesId-1]=`<< /Type /Pages /Kids [${pageIds.map(id=>id+' 0 R').join(' ')}] /Count ${pageIds.length} >>`;
+ let pdf='%PDF-1.4\n%âãÏÓ\n';const offsets=[0];
+ for(let i=0;i<objs.length;i++){offsets.push(pdfByteString(pdf).length);pdf+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}
+ const xref=pdfByteString(pdf).length;pdf+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;
+ for(let i=1;i<offsets.length;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+ pdf+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+ const bytes=new Uint8Array(pdf.length);for(let i=0;i<pdf.length;i++)bytes[i]=pdf.charCodeAt(i)&255;
+ return new Blob([bytes],{type:'application/pdf'});
+}
+function safeFilename(s){return (s||'rapportino').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'rapportino'}
+function downloadPdf(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+function createPdfOrAlert(){if(!items.length){alert('Aggiungi almeno un materiale prima di creare il PDF.');return null}return makePdfBlob()}
+$('pdfBtn').addEventListener('click',()=>{const blob=createPdfOrAlert();if(blob)downloadPdf(blob,safeFilename($('listTitle').value.trim())+'.pdf')});
+$('shareBtn').addEventListener('click',async()=>{
+ const blob=createPdfOrAlert();if(!blob)return;
+ const filename=safeFilename($('listTitle').value.trim())+'.pdf';
+ const file=new File([blob],filename,{type:'application/pdf'});
+ if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  try{await navigator.share({title:$('listTitle').value.trim()||'Rapportino',files:[file]});return}catch(e){if(e.name==='AbortError')return}
+ }
+ downloadPdf(blob,filename);alert('Il PDF è stato scaricato. Puoi allegarlo in WhatsApp, email o un’altra app.');
+});
+$('csvBtn').addEventListener('click',()=>{if(!items.length){alert('Aggiungi almeno un materiale prima di scaricare il CSV.');return}const rows=[['Articolo','Misura / tipo','Quantità','Unità','FA'],...items.map(it=>[it.name,it.measure||'',fmt(it.qty),it.unit,it.fa?'Sì':''])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rapportino.csv';a.click();URL.revokeObjectURL(url)});
+load();
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+})();
+</script></body></html>
