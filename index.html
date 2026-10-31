@@ -174,7 +174,7 @@ function makePdfBlob(){
   if(y-rowHeight<58){pages.push(cmds.join('\n'));cmds=[];header(false);}
   labelLines.forEach((ln,i)=>text(left,y-i*14,11,ln,'F1'));
   text(right-estimate(qty,11),y,11,qty,'F1');
-  y-=rowHeight;line(left,y+7,right,y+7,.35);
+  y-=rowHeight;line(left,y+rowHeight/2,right,y+rowHeight/2,.35);
  }
  pages.push(cmds.join('\n'));
  const objs=[];const add=body=>{objs.push(body);return objs.length};
