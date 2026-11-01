@@ -52,7 +52,7 @@ button{border:0;border-radius:11px;padding:11px 14px;font:600 .97rem system-ui;c
 <div id="manageList" style="margin-top:12px"></div>
 <div class="small-actions"><button class="light" id="closeManageBtn">Chiudi gestione</button></div>
 </section>
-<section class="panel no-print" id="actionsPanel"><h2>4. Esporta e condividi</h2><div class="actions"><button class="primary" id="pdfBtn">📄 Crea PDF</button><button class="dark" id="shareBtn">↗ Condividi PDF</button><button class="light full" id="csvBtn">Scarica CSV per Excel</button><button class="dark full" id="driveBtn">☁ Salva su Google Drive</button><button class="light full" id="manageBtn">⚙ Gestisci articoli</button></div><p class="note">“Crea PDF” e “Condividi PDF” usano lo stesso modello grafico. Se la condivisione diretta non è supportata, il PDF viene scaricato. La lista e il catalogo vengono salvati su questo dispositivo.</p></section>
+<section class="panel no-print" id="actionsPanel"><h2>4. Esporta e condividi</h2><div class="actions"><button class="primary" id="pdfBtn">📄 Crea PDF</button><button class="dark" id="shareBtn">↗ Condividi PDF</button><button class="light full" id="csvBtn">Scarica CSV per Excel</button><button class="dark full" id="driveBtn">☁ Salva su Google Drive</button><button class="light full" id="manageBtn">⚙ Gestisci articoli</button><button class="light full" id="syncCatalogBtn">↻ Sincronizza catalogo da Drive</button><button class="dark full" id="saveCatalogDriveBtn">☁ Salva catalogo su Drive</button></div><p class="note" id="catalogSyncNote">Il catalogo è salvato su questo dispositivo. Usa i pulsanti per sincronizzarlo con Google Drive.</p><p class="note">I PDF continuano a essere salvati separatamente nella cartella Rapportini.</p></section>
 </main><footer>Rapportino · I dati restano nel browser di questo dispositivo.</footer>
 <script>
 (()=>{
@@ -86,7 +86,7 @@ function save(){try{localStorage.setItem(STORAGE,JSON.stringify({items,title:$('
 function load(){try{const c=JSON.parse(localStorage.getItem(CATALOG)||'null');catalog=Array.isArray(c)&&c.length?c:structuredClone(initial)}catch(e){catalog=structuredClone(initial)}
 try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');items=Array.isArray(d.items)?d.items:[];$('listTitle').value=d.title||'';$('customer').value=d.customer||'';$('workDate').value=d.date||today()}catch(e){items=[];$('workDate').value=today()}
 saveCatalog();renderArticleSelect();renderItems();}
-function saveCatalog(){try{localStorage.setItem(CATALOG,JSON.stringify(catalog))}catch(e){}}
+function saveCatalog(){try{localStorage.setItem(CATALOG,JSON.stringify(catalog))}catch(e){} if(catalogDriveFileId&&driveTokenClient&&!catalogSyncBusy){clearTimeout(catalogSyncTimer);catalogSyncTimer=setTimeout(()=>{withDriveCatalog(token=>saveCatalogToDrive(token)).catch(error=>catalogStatus('Modifiche locali non sincronizzate: '+error.message,true))},1200)}}
 function renderArticleSelect(){const sel=$('articleSelect');sel.innerHTML=catalog.map((a,i)=>`<option value="${i}">${esc(a.name)}</option>`).join('');if(!catalog.length)sel.innerHTML='<option value="">Aggiungi un articolo</option>';updateMeasures();}
 function updateMeasures(){const a=catalog[Number($('articleSelect').value)];const field=$('measureField'),sel=$('measureSelect');if(!a){sel.innerHTML='<option value="">Nessuna misura</option>';return}
 const measures=Array.isArray(a.measures)?a.measures:[];if(!measures.length){field.classList.add('hidden');sel.innerHTML='<option value="">—</option>'}else{field.classList.remove('hidden');sel.innerHTML=measures.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}}
@@ -212,6 +212,180 @@ $('shareBtn').addEventListener('click',async()=>{
  downloadPdf(blob,filename);alert('Il PDF è stato scaricato. Puoi allegarlo in WhatsApp, email o un’altra app.');
 });
 
+
+/********************************************************
+ * SINCRONIZZAZIONE CATALOGO CON GOOGLE DRIVE
+ ********************************************************/
+const CATALOG_FILE_NAME='catalogo-materiali.json';
+let catalogDriveVersion=0;
+let catalogDriveFileId=null;
+let catalogSyncBusy=false;
+let catalogSyncTimer=null;
+
+async function driveRequest(url,token,options={}){
+ const response=await fetch(url,{
+  ...options,
+  headers:{...(options.headers||{}),Authorization:'Bearer '+token}
+ });
+ const text=await response.text();
+ let data={};
+ try{data=text?JSON.parse(text):{}}catch(e){data={raw:text}}
+ if(!response.ok){
+  const error=new Error(data.error?.message||('Google Drive: HTTP '+response.status));
+  error.status=response.status;
+  throw error;
+ }
+ return {data,etag:response.headers.get('ETag'),response};
+}
+
+async function findCatalogFile(token){
+ const q="name = '"+CATALOG_FILE_NAME+"' and '"+DRIVE_FOLDER_ID+"' in parents and trashed = false";
+ const url='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name,version,modifiedTime)&spaces=drive';
+ const result=await driveRequest(url,token);
+ return result.data.files?.[0]||null;
+}
+
+async function readCatalogFile(token,file){
+ const result=await driveRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(file.id)+'?alt=media',token);
+ if(!result.data||!Array.isArray(result.data.items)||!Number.isInteger(Number(result.data.version))){
+  throw new Error('Il file catalogo su Drive non ha un formato valido.');
+ }
+ catalogDriveFileId=file.id;
+ catalogDriveVersion=Number(result.data.version);
+ return result.data;
+}
+
+function catalogStatus(message,isError=false){
+ const note=$('catalogSyncNote');
+ if(note){note.textContent=message;note.style.color=isError?'#b42318':'';}
+}
+
+async function syncCatalogFromDrive(token,allowCreate=true){
+ if(catalogSyncBusy)return;
+ catalogSyncBusy=true;
+ try{
+  catalogStatus('Sincronizzazione catalogo con Google Drive…');
+  let file=await findCatalogFile(token);
+  if(!file){
+   if(!allowCreate){
+    catalogStatus('Catalogo non trovato su Drive.',true);
+    return;
+   }
+   const initialCatalog={version:1,updatedAt:new Date().toISOString(),items:catalog};
+   const boundary='catalog_'+Date.now();
+   const metadata={name:CATALOG_FILE_NAME,mimeType:'application/json',parents:[DRIVE_FOLDER_ID]};
+   const body=new Blob([
+    '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+    JSON.stringify(metadata),
+    '\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+    JSON.stringify(initialCatalog),
+    '\r\n--'+boundary+'--'
+   ],{type:'multipart/related; boundary='+boundary});
+   const created=await driveRequest('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,version',token,{method:'POST',body});
+   catalogDriveFileId=created.data.id;
+   catalogDriveVersion=Number(initialCatalog.version);
+   catalog=initialCatalog.items;
+   saveCatalog();
+   renderArticleSelect();
+   renderManageIfOpen();
+   catalogStatus('Catalogo iniziale creato su Google Drive.');
+   return;
+  }
+  const remote=await readCatalogFile(token,file);
+  catalog=remote.items;
+  saveCatalog();
+  renderArticleSelect();
+  renderManageIfOpen();
+  catalogStatus('Catalogo sincronizzato · versione '+catalogDriveVersion+' · '+new Date(remote.updatedAt||Date.now()).toLocaleString('it-IT'));
+ }catch(error){
+  catalogStatus('Sincronizzazione non riuscita: '+error.message,true);
+  throw error;
+ }finally{
+  catalogSyncBusy=false;
+ }
+}
+
+function renderManageIfOpen(){
+ if(!$('managePanel').classList.contains('hidden'))renderManage();
+}
+
+async function saveCatalogToDrive(token){
+ if(catalogSyncBusy)throw new Error('Sincronizzazione già in corso. Attendi qualche secondo.');
+ catalogSyncBusy=true;
+ try{
+  catalogStatus('Salvataggio catalogo su Google Drive…');
+  let file=catalogDriveFileId?{id:catalogDriveFileId}:await findCatalogFile(token);
+  const newVersion=catalogDriveVersion+1;
+  const payload={version:newVersion,updatedAt:new Date().toISOString(),items:catalog};
+  if(!file){
+   const boundary='catalog_'+Date.now();
+   const metadata={name:CATALOG_FILE_NAME,mimeType:'application/json',parents:[DRIVE_FOLDER_ID]};
+   const body=new Blob([
+    '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+    JSON.stringify(metadata),
+    '\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+    JSON.stringify(payload),
+    '\r\n--'+boundary+'--'
+   ],{type:'multipart/related; boundary='+boundary});
+   const created=await driveRequest('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,version',token,{method:'POST',body});
+   catalogDriveFileId=created.data.id;
+  }else{
+   const current=await driveRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(file.id)+'?alt=media',token);
+   const currentVersion=Number(current.data.version||0);
+   if(currentVersion!==catalogDriveVersion){
+    catalog=Array.isArray(current.data.items)?current.data.items:catalog;
+    catalogDriveVersion=currentVersion;
+    saveCatalog();
+    renderArticleSelect();
+    renderManageIfOpen();
+    throw new Error('Il catalogo è stato modificato da un altro dispositivo. Ho caricato la versione aggiornata: controlla le modifiche e riprova.');
+   }
+   const metadata=await driveRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(file.id)+'?fields=id,version',token);
+   const etag=metadata.etag;
+   if(!etag)throw new Error('Google Drive non ha restituito il controllo versione (ETag). Riprova.');
+   await driveRequest('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=media',token,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json','If-Match':etag},
+    body:JSON.stringify(payload)
+   });
+   catalogDriveFileId=file.id;
+  }
+  catalogDriveVersion=newVersion;
+  catalogStatus('Catalogo salvato su Google Drive · versione '+catalogDriveVersion);
+ }finally{
+  catalogSyncBusy=false;
+ }
+}
+
+async function withDriveCatalog(action){
+ if(!window.google||!google.accounts||!google.accounts.oauth2)throw new Error('Servizio Google non caricato. Ricarica la pagina e riprova.');
+ const token=await requestDriveToken();
+ const userResponse=await fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+token}});
+ if(!userResponse.ok)throw new Error('Impossibile verificare l’account Google.');
+ const user=await userResponse.json();
+ if(!user.email||user.email.toLowerCase()!=='alessandro.santini.tesar@gmail.com'||user.verified_email!==true)throw new Error('Accedi con alessandro.santini.tesar@gmail.com.');
+ return action(token);
+}
+
+async function manualCatalogSync(){
+ const button=$('syncCatalogBtn');
+ button.disabled=true;
+ try{
+  await withDriveCatalog(token=>syncCatalogFromDrive(token,true));
+  alert('Catalogo aggiornato da Google Drive.');
+ }catch(error){alert('Sincronizzazione non riuscita.\\n'+error.message)}
+ finally{button.disabled=false}
+}
+async function manualCatalogSave(){
+ const button=$('saveCatalogDriveBtn');
+ button.disabled=true;
+ try{
+  await withDriveCatalog(token=>saveCatalogToDrive(token));
+  alert('Catalogo salvato su Google Drive.');
+ }catch(error){alert('Salvataggio catalogo non riuscito.\\n'+error.message)}
+ finally{button.disabled=false}
+}
+
 const GOOGLE_CLIENT_ID='41668682200-gkopqf1v7f1fk04vd6qhsh7t5bja6m7g.apps.googleusercontent.com';
 const DRIVE_FOLDER_ID='1hAt6fFUrOFbyw0BpYWSemxH0nbbVRtgY';
 let driveTokenClient=null;
@@ -265,7 +439,6 @@ async function savePdfToDrive(){
 $('driveBtn').addEventListener('click',savePdfToDrive);
 
 $('csvBtn').addEventListener('click',()=>{if(!items.length){alert('Aggiungi almeno un materiale prima di scaricare il CSV.');return}const rows=[['Articolo','Misura / tipo','Quantità','Unità','FA'],...items.map(it=>[it.name,it.measure||'',fmt(it.qty),it.unit,it.fa?'Sì':''])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rapportino.csv';a.click();URL.revokeObjectURL(url)});
-load();
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+load();\n$('syncCatalogBtn').addEventListener('click',manualCatalogSync);\n$('saveCatalogDriveBtn').addEventListener('click',manualCatalogSave);\nif('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 })();
 </script></body></html>
