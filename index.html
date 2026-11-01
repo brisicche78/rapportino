@@ -442,6 +442,8 @@ async function savePdfToDrive(){
 $('driveBtn').addEventListener('click',savePdfToDrive);
 
 $('csvBtn').addEventListener('click',()=>{if(!items.length){alert('Aggiungi almeno un materiale prima di scaricare il CSV.');return}const rows=[['Articolo','Misura / tipo','Quantità','Unità','FA'],...items.map(it=>[it.name,it.measure||'',fmt(it.qty),it.unit,it.fa?'Sì':''])];const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rapportino.csv';a.click();URL.revokeObjectURL(url)});
-load();\n$('syncCatalogBtn').addEventListener('click',manualCatalogSync);\n$('saveCatalogDriveBtn').addEventListener('click',manualCatalogSave);\nif('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+load();
+$('syncCatalogBtn').addEventListener('click',manualCatalogSync);
+$('saveCatalogDriveBtn').addEventListener('click',manualCatalogSave);\nif('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 })();
 </script></body></html>
