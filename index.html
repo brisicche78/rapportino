@@ -86,7 +86,7 @@ function save(){try{localStorage.setItem(STORAGE,JSON.stringify({items,title:$('
 function load(){try{const c=JSON.parse(localStorage.getItem(CATALOG)||'null');catalog=Array.isArray(c)&&c.length?c:structuredClone(initial)}catch(e){catalog=structuredClone(initial)}
 try{const d=JSON.parse(localStorage.getItem(STORAGE)||'{}');items=Array.isArray(d.items)?d.items:[];$('listTitle').value=d.title||'';$('customer').value=d.customer||'';$('workDate').value=d.date||today()}catch(e){items=[];$('workDate').value=today()}
 saveCatalog();renderArticleSelect();renderItems();}
-function saveCatalog(){try{localStorage.setItem(CATALOG,JSON.stringify(catalog))}catch(e){} if(catalogDriveFileId&&driveAccessToken&&Date.now()<driveTokenExpiresAt-60000&&!catalogSyncBusy){clearTimeout(catalogSyncTimer);catalogSyncTimer=setTimeout(()=>{saveCatalogToDrive(driveAccessToken).catch(error=>catalogStatus('Modifiche locali non sincronizzate: '+error.message,true))},1200)}}
+function saveCatalog(){try{localStorage.setItem(CATALOG,JSON.stringify(catalog))}catch(e){}}
 function renderArticleSelect(){const sel=$('articleSelect');sel.innerHTML=catalog.map((a,i)=>`<option value="${i}">${esc(a.name)}</option>`).join('');if(!catalog.length)sel.innerHTML='<option value="">Aggiungi un articolo</option>';updateMeasures();}
 function updateMeasures(){const a=catalog[Number($('articleSelect').value)];const field=$('measureField'),sel=$('measureSelect');if(!a){sel.innerHTML='<option value="">Nessuna misura</option>';return}
 const measures=Array.isArray(a.measures)?a.measures:[];if(!measures.length){field.classList.add('hidden');sel.innerHTML='<option value="">—</option>'}else{field.classList.remove('hidden');sel.innerHTML=measures.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}}
@@ -332,14 +332,8 @@ async function saveCatalogToDrive(token){
   }else{
    const current=await driveRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(file.id)+'?alt=media',token);
    const currentVersion=Number(current.data.version||0);
-   if(currentVersion!==catalogDriveVersion){
-    catalog=Array.isArray(current.data.items)?current.data.items:catalog;
-    catalogDriveVersion=currentVersion;
-    saveCatalog();
-    renderArticleSelect();
-    renderManageIfOpen();
-    throw new Error('Il catalogo è stato modificato da un altro dispositivo. Ho caricato la versione aggiornata: controlla le modifiche e riprova.');
-   }
+   if(!Array.isArray(current.data.items)||!Number.isInteger(currentVersion))throw new Error('Il catalogo presente su Drive non è valido.');
+   payload.version=currentVersion+1;
    await driveRequest('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=media',token,{
     method:'PATCH',
     headers:{'Content-Type':'application/json'},
