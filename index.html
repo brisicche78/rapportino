@@ -340,12 +340,9 @@ async function saveCatalogToDrive(token){
     renderManageIfOpen();
     throw new Error('Il catalogo è stato modificato da un altro dispositivo. Ho caricato la versione aggiornata: controlla le modifiche e riprova.');
    }
-   const metadata=await driveRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(file.id)+'?fields=id,version',token);
-   const etag=metadata.etag;
-   if(!etag)throw new Error('Google Drive non ha restituito il controllo versione (ETag). Riprova.');
    await driveRequest('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=media',token,{
     method:'PATCH',
-    headers:{'Content-Type':'application/json','If-Match':etag},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
    });
    catalogDriveFileId=file.id;
